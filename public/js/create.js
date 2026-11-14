@@ -28,7 +28,6 @@ const errorText = $('error-text');
 const drawerAgy = $('drawer-agy');
 const drawerApp = $('drawer-app');
 const drawerHint = $('drawer-hint');
-const keywordsHint = $('keywords-hint');
 const appSteps = $('app-steps');
 const copyButton = $('copy-prompt');
 const copyStatus = $('copy-status');
@@ -77,7 +76,7 @@ function keywordList() {
 /**
  * Before a photo is chosen every empty line shows a placeholder. After that an empty location or
  * date is left off, as on the final card; empty keywords keep their placeholder because Gemini fills
- * them (except in Gemini app mode, where nobody fills them and the line is left off).
+ * them (in both modes).
  */
 function updateText() {
   const strings = displayText({
@@ -86,8 +85,7 @@ function updateText() {
     month: monthSelect.value,
     year: yearInput.value.trim(),
   });
-  const afterPhoto = appMode() ? [] : ['keywords'];
-  const placeholderKeys = (photoFile ? afterPhoto : Object.keys(PLACEHOLDERS)).filter((k) => !strings[k]);
+  const placeholderKeys = (photoFile ? ['keywords'] : Object.keys(PLACEHOLDERS)).filter((k) => !strings[k]);
   for (const k of placeholderKeys) strings[k] = PLACEHOLDERS[k];
   card.setText(strings);
   for (const k of placeholderKeys) {
@@ -177,7 +175,6 @@ async function usePhoto(file) {
   card.setPhoto(url);
   updateText();
   checkPanelShape();
-  resetPrompt();
   photoTitle.textContent = '';
   photoTitle.append(`${file.name} · `);
   const change = document.createElement('span');
@@ -229,9 +226,6 @@ function syncDrawer() {
   drawerHint.textContent = app
     ? 'You make the stamp in the Gemini app and add it here. Uses the Gemini app’s own, larger allowance.'
     : 'Gemini draws it for you through agy. About 13 postcards every 5 hours.';
-  keywordsHint.textContent = app
-    ? 'Separate them with commas. Leave blank and the line is left off.'
-    : 'Separate them with commas. Leave blank and Gemini suggests three.';
   card.setPaperImage(app ? panelURL : null);
   updateText();
   if (!app) clearError('panel');
@@ -250,25 +244,18 @@ try {
 for (const r of [drawerAgy, drawerApp]) r.addEventListener('change', syncDrawer);
 syncDrawer();
 
-// The prompt depends on the photo's orientation, so a new photo needs a fresh copy.
-function resetPrompt() {
-  copyStatus.textContent = '';
-  promptText.hidden = true;
-}
+// One prompt for every photo (Gemini picks the shape from the photo it is given). It is loaded with
+// the page, so a click copies it straight away, with or without a photo chosen.
+const promptRequest = fetch('/api/brief')
+  .then((res) => (res.ok ? res.json() : null))
+  .then((body) => (typeof body?.prompt === 'string' ? body.prompt : null))
+  .catch(() => null);
 
 copyButton.addEventListener('click', async () => {
-  if (!photoFile) {
-    copyStatus.textContent = 'Choose the photo first: the prompt depends on its shape.';
-    return;
-  }
   copyStatus.textContent = '';
-  let prompt;
-  try {
-    const res = await fetch(`/api/brief?orientation=${card.orientation}`);
-    if (!res.ok) throw new Error();
-    ({ prompt } = await res.json());
-  } catch {
-    copyStatus.textContent = "Couldn't get the prompt. Is the server still running?";
+  const prompt = await promptRequest;
+  if (!prompt) {
+    copyStatus.textContent = "Couldn't get the prompt. Is the server still running? Reload the page.";
     return;
   }
   promptText.value = prompt;
@@ -309,7 +296,7 @@ function checkPanelShape() {
 async function usePanel(file) {
   clearError('panel');
   if (!file) return;
-  if (!file.type.startsWith('image/')) {
+  if (!file.type.startsWith('image/') && !/\.(png|jpe?g|webp)$/i.test(file.name)) {
     showFieldError('panel', "That file isn't an image.");
     return;
   }
@@ -334,19 +321,58 @@ async function usePanel(file) {
   change.className = 'dropzone__link';
   change.textContent = 'change image';
   panelTitle.append(change);
+  panelDrop.classList.add('has-photo');
   checkPanelShape();
 }
 
+const LINK_NOT_FILE = 'That came in as a link, not an image file. In Gemini, use Download (then drop the downloaded file here) or Copy image (then press ⌘V here).';
+
+/** An image dragged straight out of a web page often arrives as a link: try to fetch it. */
+async function panelFromLink(dataTransfer) {
+  const link = (dataTransfer.getData('text/uri-list') || dataTransfer.getData('text/plain')).split('\n')[0].trim();
+  if (!/^(https?:|data:image\/|blob:)/i.test(link)) return null;
+  try {
+    const res = await fetch(link);
+    const blob = await res.blob();
+    if (!res.ok || !blob.type.startsWith('image/')) return null;
+    return new File([blob], `gemini.${blob.type.split('/')[1] || 'png'}`, { type: blob.type });
+  } catch {
+    return null; // another site's image that the browser won't hand over
+  }
+}
+
 panelInput.addEventListener('change', () => usePanel(panelInput.files[0]));
-panelDrop.addEventListener('dragover', (e) => {
+
+// The whole Gemini app box takes drops (not only the small zone), so the image is easy to land.
+let dragDepth = 0;
+appSteps.addEventListener('dragenter', (e) => {
   e.preventDefault();
+  dragDepth++;
   panelDrop.classList.add('is-over');
 });
-panelDrop.addEventListener('dragleave', () => panelDrop.classList.remove('is-over'));
-panelDrop.addEventListener('drop', (e) => {
+appSteps.addEventListener('dragover', (e) => e.preventDefault());
+appSteps.addEventListener('dragleave', () => {
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (!dragDepth) panelDrop.classList.remove('is-over');
+});
+appSteps.addEventListener('drop', async (e) => {
   e.preventDefault();
+  dragDepth = 0;
   panelDrop.classList.remove('is-over');
-  usePanel(e.dataTransfer.files[0]);
+  const file = e.dataTransfer.files[0] ?? (await panelFromLink(e.dataTransfer));
+  if (file) usePanel(file);
+  else showFieldError('panel', LINK_NOT_FILE);
+});
+
+// Paste: "Copy image" in Gemini, then ⌘V anywhere on this page while Gemini app is chosen.
+document.addEventListener('paste', (e) => {
+  if (!appMode()) return;
+  const item = [...(e.clipboardData?.items ?? [])].find((i) => i.kind === 'file' && i.type.startsWith('image/'));
+  if (!item) return;
+  e.preventDefault();
+  const file = item.getAsFile();
+  usePanel(new File([file], file.name && file.name !== 'image.png' ? file.name : `gemini-pasted.${file.type.split('/')[1] || 'png'}`, { type: file.type }));
+  panelDrop.scrollIntoView({ block: 'nearest' });
 });
 
 // ---------- Delivery ----------

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, utimesSync, chmodSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { options, findNewestImage, parseKeywords, generatePanel, quotaError } from '../lib/agy.js';
+import { options, findNewestImage, parseKeywords, generatePanel, suggestKeywords, quotaError } from '../lib/agy.js';
 
 let root;
 const logged = [];
@@ -271,4 +271,27 @@ test('jobs run one at a time', async () => {
     generatePanel('horizontal', '/b.jpg', job),
   ]);
   assert.equal(readFileSync(log, 'utf8'), 'start\nend\nstart\nend\n');
+});
+
+test('suggestKeywords: plan mode, no image request, stops agy once the keywords line is printed', async () => {
+  const { job } = setup(`echo "$@" > "$JOB/args.txt"
+echo '["Harbour","sails","bridge"]'
+sleep 5
+echo 'late' > "$JOB/late.txt"`);
+  const t0 = Date.now();
+  const kw = await suggestKeywords('/abs/photo.jpg', job);
+  assert.deepEqual(kw, ['harbour', 'sails', 'bridge']);
+  assert.ok(Date.now() - t0 < 3000, 'did not wait for agy to finish');
+  const args = readFileSync(join(job, 'args.txt'), 'utf8');
+  assert.match(args, /--mode plan/);
+  assert.match(args, /Do not generate/);
+  await new Promise((r) => setTimeout(r, 300));
+  assert.equal(existsSync(join(job, 'late.txt')), false, 'agy was stopped');
+});
+
+test('suggestKeywords: a failure, a quota message or no usable line gives [] and never throws', async () => {
+  for (const script of ['exit 3', "echo 'RESOURCE_EXHAUSTED quota, reset after 1h'", "echo 'no idea'"]) {
+    const { job } = setup(script);
+    assert.deepEqual(await suggestKeywords('/abs/photo.jpg', job), []);
+  }
 });

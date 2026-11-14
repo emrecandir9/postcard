@@ -50,10 +50,12 @@ Stamp drawing has two modes on `/create`:
 - **Automatic** (default): agy draws the panel, one image per postcard. agy's image model
   (`gemini-3.1-flash-image`) has its own allowance, separate from the Gemini app: on this plan about
   13 images per 5-hour window.
-- **Gemini app**: "Copy prompt" copies the prompt for this photo (`GET /api/brief?orientation=…`). You
+- **Gemini app**: "Copy prompt" copies one prompt that works for any photo (`GET /api/brief`;
+  Gemini picks the wide or tall shape from the attached photo). It can be copied before a photo is chosen. You
   paste it into the Gemini app with the photo attached, download the image it makes and add it to the
   form, which sends it as `panel` with the postcard. agy is not used, so this works when agy's quota is
-  used up. Keywords are not suggested in this mode; a blank keywords line is left off.
+  used up for drawing. Blank keywords are still suggested by agy's model from the photo, in a
+  separate text-only call (plan mode, no image is made, about 15 s); this uses no image quota.
 
 Only one postcard is made at a time; a second one waits in "preparing". Finished postcards stay
 readable after a restart (a small `<id>.json` is saved beside each `<id>.jpg`). The server log shows

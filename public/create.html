@@ -83,7 +83,7 @@
           <div class="app-steps" id="app-steps" hidden>
             <ol class="app-steps__list">
               <li>
-                <p>Copy the prompt for this photo.</p>
+                <p>Copy the prompt. It works for any photo.</p>
                 <button class="btn btn--secondary btn--small" type="button" id="copy-prompt">Copy prompt</button>
                 <span class="app-steps__status" id="copy-status" role="status"></span>
                 <textarea class="input textarea app-steps__prompt" id="prompt-text" rows="6" readonly hidden aria-label="Prompt for the Gemini app"></textarea>
@@ -92,11 +92,13 @@
                 <p><a href="https://gemini.google.com/app" target="_blank" rel="noopener">Open the Gemini app</a>, paste the prompt, attach the same photo and send it.</p>
               </li>
               <li>
-                <p>Download the image Gemini makes and add it here.</p>
+                <p>Add the image Gemini makes.</p>
                 <input id="panel" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp"
-                       aria-describedby="panel-status panel-error" />
-                <label for="panel" class="dropzone dropzone--small" id="panel-drop">
+                       aria-describedby="panel-hint panel-status panel-error" />
+                <label for="panel" class="dropzone dropzone--panel" id="panel-drop">
+                  <svg class="dropzone__icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 15V4M7.5 8.5L12 4l4.5 4.5"/><path d="M4 14v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></svg>
                   <span class="dropzone__title" id="panel-title">Drop Gemini's image here or <span class="dropzone__link">choose a file</span></span>
+                  <span class="dropzone__hint" id="panel-hint">Or use Copy image in Gemini and press ⌘V on this page.</span>
                 </label>
                 <p class="field__hint" id="panel-status" role="status"></p>
                 <p class="field__error" id="panel-error" hidden></p>

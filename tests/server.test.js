@@ -10,7 +10,7 @@ import { jpegWithExif } from './helpers.js';
 let root;
 let resultsDir;
 const servers = [];
-const calls = { panel: [], email: [] };
+const calls = { panel: [], email: [], keywords: [] };
 const behaviour = { panelThrows: false, emailEnabled: true, emailThrows: false, keywords: ['sea', 'cliffs', 'light'], gate: null };
 const logs = [];
 
@@ -26,6 +26,11 @@ const deps = () => ({
     const p = join(jobDir, 'fake-panel.png');
     await sharp({ create: { width: 1024, height: 1024, channels: 3, background: '#EAE0CA' } }).png().toFile(p);
     return { imagePath: p, keywords: opts.keywords ? behaviour.keywords : [] };
+  },
+  async suggestKeywords(photoPath) {
+    calls.keywords.push(photoPath);
+    assert.ok(existsSync(photoPath), 'cropped photo is written for agy');
+    return ['harbour', 'sails', 'bridge'];
   },
   async scheduleEmail(args) {
     calls.email.push(args);
@@ -329,17 +334,14 @@ test('pages and static routes', async () => {
 
 // ---------- Gemini app (manual) mode ----------
 
-test('GET /api/brief: the prompt to paste into the Gemini app, per orientation', async () => {
-  const h = await fetch(`${base}/api/brief?orientation=horizontal`);
-  assert.equal(h.status, 200);
-  const { prompt } = await h.json();
-  assert.match(prompt, /16:7/);
+test('GET /api/brief: one prompt for the Gemini app that covers both photo shapes', async () => {
+  const res = await fetch(`${base}/api/brief`);
+  assert.equal(res.status, 200);
+  const { prompt } = await res.json();
   assert.match(prompt, /attached photo/i);
-  const v = await (await fetch(`${base}/api/brief?orientation=vertical`)).json();
-  assert.match(v.prompt, /1:2/);
-  const bad = await fetch(`${base}/api/brief?orientation=diagonal`);
-  assert.equal(bad.status, 400);
-  assert.ok((await bad.json()).error);
+  assert.match(prompt, /wider than it is tall[^\n]*16:7/);
+  assert.match(prompt, /taller than it is wide, or square[^\n]*1:2/);
+  assert.match(prompt, /PAPER AREA/);
 });
 
 async function postWithPanel(fields, panel) {
@@ -351,15 +353,17 @@ async function postWithPanel(fields, panel) {
   return { status: res.status, body: await res.json() };
 }
 
-test('an uploaded stamp panel is used as is: agy is not called and blank keywords stay blank', async () => {
+test('an uploaded stamp panel is used as is: agy draws nothing and is asked only for blank keywords', async () => {
   const red = await sharp({ create: { width: 1600, height: 700, channels: 3, background: '#C03020' } }).png().toBuffer();
   const before = calls.panel.length;
+  const kwBefore = calls.keywords.length;
   const { status: code, body } = await postWithPanel({ ...valid, keywords: '' }, red);
   assert.equal(code, 202, JSON.stringify(body));
   const done = await settle(body.id);
   assert.equal(done.status, 'done', done.error);
-  assert.equal(calls.panel.length, before, 'agy not asked');
-  assert.deepEqual(done.result.keywords, []);
+  assert.equal(calls.panel.length, before, 'agy not asked to draw');
+  assert.equal(calls.keywords.length, kwBefore + 1, 'agy asked for keywords once');
+  assert.deepEqual(done.result.keywords, ['harbour', 'sails', 'bridge']);
   // Bottom-left of the paper strip (away from the text) carries the uploaded panel's colour.
   const jpeg = await (await fetch(`${base}${done.result.imageUrl}`)).arrayBuffer();
   const { data, info } = await sharp(Buffer.from(jpeg)).raw().toBuffer({ resolveWithObject: true });
@@ -370,9 +374,11 @@ test('an uploaded stamp panel is used as is: agy is not called and blank keyword
 
 test('typed keywords are printed with an uploaded panel; an unreadable panel is a 400', async () => {
   const paper = await sharp({ create: { width: 800, height: 1600, channels: 3, background: '#EAE0CA' } }).png().toBuffer();
+  const kwBefore = calls.keywords.length;
   const ok = await postWithPanel({ ...valid, keywords: 'tram, hills, tiles' }, paper);
   assert.equal(ok.status, 202);
   assert.deepEqual((await settle(ok.body.id)).result.keywords, ['tram', 'hills', 'tiles']);
+  assert.equal(calls.keywords.length, kwBefore, 'typed keywords: agy not asked');
 
   const before = calls.panel.length;
   const bad = await postWithPanel(valid, Buffer.from('not an image'));

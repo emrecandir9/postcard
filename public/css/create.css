@@ -383,7 +383,11 @@ fieldset.field--group {
   font-size: var(--fs-caption);
 }
 
-.dropzone--small {
+.dropzone--panel {
+  min-height: 150px;
+}
+
+.dropzone--panel.has-photo {
   min-height: 0;
   padding: var(--s-4);
 }

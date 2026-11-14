@@ -85,6 +85,7 @@ async function checkReadable(buffer, unreadable = UNREADABLE) {
 export function createApp(deps = {}) {
   const {
     generatePanel = agy.generatePanel,
+    suggestKeywords = agy.suggestKeywords,
     readMetadata = metadata.readMetadata,
     scheduleEmail = email.scheduleEmail,
     emailEnabled = email.emailEnabled,
@@ -108,13 +109,8 @@ export function createApp(deps = {}) {
   app.get('/api/config', (req, res) => res.json({ emailEnabled: emailEnabled() }));
 
   // Gemini app mode: the prompt the owner pastes into the Gemini app with the photo attached.
-  app.get('/api/brief', (req, res) => {
-    const { orientation } = req.query;
-    if (orientation !== 'horizontal' && orientation !== 'vertical') {
-      return res.status(400).json({ error: 'orientation must be "horizontal" or "vertical".' });
-    }
-    res.json({ prompt: appPrompt(orientation) });
-  });
+  // One text for every photo: Gemini picks the shape from the attached photo.
+  app.get('/api/brief', (req, res) => res.json({ prompt: appPrompt() }));
 
   app.post('/api/metadata', upload.single('photo'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'Please choose a photo.' });
@@ -152,12 +148,15 @@ export function createApp(deps = {}) {
       await sharp(photo).jpeg({ quality: 90 }).toFile(photoPath);
 
       // drawing: Gemini draws the paper panel (and suggests keywords in the same call when needed).
-      // In Gemini app mode the panel was drawn in the app and uploaded, so agy is not used at all.
+      // In Gemini app mode the panel was drawn in the app and uploaded: agy draws nothing and is only
+      // asked for the keywords (text only, no image quota) when they were left blank.
       stage('drawing');
       const typed = input.keywords.map((k) => k.toLowerCase());
       let keywords = typed;
       let drawnPanel = panelBuffer;
-      if (!drawnPanel) {
+      if (drawnPanel) {
+        if (!typed.length) keywords = await suggestKeywords(photoPath, jobDir);
+      } else {
         const drawn = await generatePanel(orientation, photoPath, jobDir, { keywords: typed.length === 0 });
         if (!typed.length) keywords = drawn.keywords;
         drawnPanel = await readFile(drawn.imagePath);
