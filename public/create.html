@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Create a postcard · Field Notes Postcard</title>
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/postcard.css" />
+    <link rel="stylesheet" href="/css/create.css" />
+    <script type="module" src="/js/create.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap site-header__inner">
+        <a class="brand" href="/">
+          <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="3" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 2.5"/><path d="M9 22l5-7 3 4 3-4 4 7z" fill="currentColor"/></svg>
+          Field Notes Postcard
+        </a>
+      </div>
+    </header>
+
+    <main class="wrap create">
+      <div class="create__intro">
+        <h1 class="heading">Make a postcard</h1>
+        <p class="create__lede">The preview shows the final layout as you type. The stamp drawing is added when you create the postcard.</p>
+      </div>
+
+      <form id="postcard-form" class="create__grid" novalidate>
+        <!-- 1. Photo -->
+        <fieldset class="card create__upload" id="upload-set">
+          <legend class="visually-hidden">Photo</legend>
+          <div class="field">
+            <span class="label" aria-hidden="true">Photo</span>
+            <input id="photo" class="visually-hidden" type="file" name="photo"
+                   accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
+                   aria-describedby="photo-hint photo-error" />
+            <label for="photo" class="dropzone" id="dropzone">
+              <svg class="dropzone__icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="15.5" cy="8.5" r="1.5"/></svg>
+              <span class="dropzone__title" id="photo-title">Drop a photo here or <span class="dropzone__link">choose a file</span></span>
+              <span class="dropzone__hint" id="photo-hint">JPEG, PNG, WebP, or HEIC if this browser can open it.</span>
+            </label>
+            <p class="field__error" id="photo-error" hidden></p>
+          </div>
+        </fieldset>
+
+        <!-- Preview (sits right of the form on wide screens, under the photo on narrow ones) -->
+        <section class="create__preview" aria-labelledby="preview-title">
+          <div class="card preview-card" id="preview-card">
+            <div class="preview-card__head">
+              <h2 class="preview-card__title" id="preview-title">Preview</h2>
+              <span class="caption" id="preview-meta"></span>
+            </div>
+
+            <div class="preview-card__stage" id="live">
+              <div id="postcard"></div>
+            </div>
+
+            <div class="result" id="result" hidden>
+              <img class="result__img" id="result-img" alt="" />
+              <p class="result__note" id="result-note" hidden></p>
+              <div class="result__actions">
+                <a class="btn btn--primary" id="download" href="#" download>Download</a>
+                <button class="btn btn--secondary" type="button" id="back">Back to editing</button>
+              </div>
+            </div>
+
+            <div class="progress" id="progress" hidden>
+              <div class="progress__bar" aria-hidden="true"><span></span></div>
+              <p class="progress__text" role="status" id="progress-text">Creating your postcard. This takes two to three minutes.</p>
+              <p class="progress__time caption"><span id="elapsed">0:00</span> elapsed</p>
+            </div>
+
+            <div class="alert" id="error" role="alert" hidden>
+              <p class="alert__text" id="error-text"></p>
+              <button class="btn btn--secondary" type="button" id="retry">Retry</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2-6. Details -->
+        <fieldset class="card create__fields" id="details-set">
+          <legend class="visually-hidden">Details</legend>
+
+          <div class="field">
+            <label class="label" for="location">Location</label>
+            <input class="input" id="location" name="location" type="text" autocomplete="off"
+                   placeholder="e.g. Big Sur, California" aria-describedby="location-error" />
+            <p class="field__error" id="location-error" hidden></p>
+          </div>
+
+          <div class="field">
+            <label class="label" for="keywords">Three words <span class="label__optional">optional</span></label>
+            <input class="input" id="keywords" name="keywords" type="text" autocomplete="off"
+                   placeholder="e.g. salt, fog, cliffs" aria-describedby="keywords-hint" />
+            <p class="field__hint" id="keywords-hint">Separate them with commas. Leave blank and Gemini suggests three.</p>
+          </div>
+
+          <fieldset class="field field--group">
+            <legend class="label">Date</legend>
+            <div class="field__row">
+              <div>
+                <label class="sublabel" for="month">Month</label>
+                <select class="input select" id="month" name="month"></select>
+              </div>
+              <div>
+                <label class="sublabel" for="year">Year</label>
+                <input class="input" id="year" name="year" type="number" inputmode="numeric"
+                       min="1000" max="9999" step="1" aria-describedby="year-error" />
+              </div>
+            </div>
+            <p class="field__error" id="year-error" hidden></p>
+          </fieldset>
+
+          <fieldset class="field field--group">
+            <legend class="label">Delivery</legend>
+            <div class="choices">
+              <label class="choice">
+                <input type="radio" name="delivery" value="download" id="delivery-download" checked />
+                <span>Download now</span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="delivery" value="email" id="delivery-email" disabled
+                       aria-describedby="email-off-note" />
+                <span>Send by email</span>
+              </label>
+            </div>
+            <p class="field__hint" id="email-off-note" hidden>Email isn't set up yet — see docs/email-setup.md</p>
+          </fieldset>
+
+          <div class="email-fields" id="email-fields" hidden>
+            <div class="field">
+              <label class="label" for="email">Recipient email</label>
+              <input class="input" id="email" name="email" type="email" autocomplete="email"
+                     placeholder="name@example.com" aria-describedby="email-error" />
+              <p class="field__error" id="email-error" hidden></p>
+            </div>
+            <div class="field">
+              <label class="label" for="sendDate">Send on</label>
+              <input class="input" id="sendDate" name="sendDate" type="date" aria-describedby="sendDate-hint sendDate-error" />
+              <p class="field__hint" id="sendDate-hint">Today or later. It goes out in the morning.</p>
+              <p class="field__error" id="sendDate-error" hidden></p>
+            </div>
+            <div class="field">
+              <label class="label" for="message">Message <span class="label__optional">optional</span></label>
+              <textarea class="input textarea" id="message" name="message" rows="4"></textarea>
+            </div>
+          </div>
+
+          <button class="btn btn--primary btn--block create__submit" type="submit" id="submit">Create postcard</button>
+        </fieldset>
+      </form>
+    </main>
+  </body>
+</html>

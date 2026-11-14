@@ -1,0 +1,83 @@
+/* The postcard drawing (live preview and landing examples).
+   Geometry, colours and font come from /shared/layout.js via inline styles and --pc-* variables
+   set in js/postcard.js. No rounded corners: the card is drawn as it will be printed. */
+
+.pc {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 0;
+  background: var(--pc-paper);
+}
+
+.pc__photo,
+.pc__paper {
+  position: absolute;
+}
+
+.pc__photo {
+  background: var(--pc-photo-tone, #d9d2c9);
+}
+
+.pc__photo-label {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--s-4);
+  text-align: center;
+  font: 500 var(--fs-caption) / 1.4 var(--font-ui);
+  color: rgba(27, 25, 23, 0.5);
+}
+
+.pc__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.pc__paper {
+  background: var(--pc-paper);
+  container-type: inline-size;
+}
+
+.pc__stamp {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  padding: 4%;
+  border: 1px dashed color-mix(in srgb, var(--pc-ink) 45%, transparent);
+  text-align: center;
+}
+
+.pc__stamp-label {
+  font-family: var(--pc-font);
+  font-size: calc(var(--pc-label-size) * 100cqw);
+  line-height: 1.3;
+  color: var(--pc-ink);
+  opacity: 0.55;
+}
+
+/* One printed line. --size is a fraction of the paper width (textLines in shared/layout.js);
+   left/top are the line's left edge (or centre) and vertical centre. */
+.pc__line {
+  position: absolute;
+  margin: 0;
+  font-family: var(--pc-font);
+  font-size: calc(var(--size) * 100cqw);
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--pc-ink);
+  opacity: var(--pc-ink-opacity);
+  mix-blend-mode: multiply;
+  transform: translateY(-50%);
+}
+
+.pc__line[data-align='center'] {
+  transform: translate(-50%, -50%);
+}
+
+.pc__line--placeholder {
+  opacity: calc(var(--pc-ink-opacity) * 0.38);
+}

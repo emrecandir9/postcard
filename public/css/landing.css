@@ -1,0 +1,137 @@
+/* Landing page. */
+
+.header-cta {
+  min-height: 44px;
+  padding-inline: var(--s-4);
+}
+
+.hero {
+  padding-block: clamp(40px, 7vw, 96px) var(--s-16);
+  text-align: center;
+}
+
+.hero .display {
+  max-width: 13ch;
+  margin-inline: auto;
+}
+
+.hero__lede {
+  max-width: 34rem;
+  margin: var(--s-6) auto 0;
+  font-size: 18px;
+  color: var(--ink-soft);
+}
+
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--s-3);
+  margin-top: var(--s-8);
+}
+
+.section {
+  padding-bottom: var(--s-16);
+}
+
+.section__title {
+  margin-bottom: var(--s-8);
+  text-align: center;
+}
+
+.section__cta {
+  margin: var(--s-10) 0 0;
+  text-align: center;
+}
+
+/* Example postcards: a row on wide screens, a column on narrow ones.
+   Flex-grow follows each card's width:height (1:1 and 5:4) so all three end up the same height. */
+.examples {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-8);
+}
+
+.example {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.example .pc,
+.example__img {
+  width: 100%;
+  height: auto;
+  box-shadow: var(--shadow);
+}
+
+.example figcaption {
+  margin-top: var(--s-3);
+  text-align: center;
+}
+
+.pc-sample[data-tone='sea'] {
+  --pc-photo-tone: #c3cbcd;
+}
+
+.pc-sample[data-tone='sand'] {
+  --pc-photo-tone: #d8ccb9;
+}
+
+.pc-sample[data-tone='sage'] {
+  --pc-photo-tone: #c6ccbd;
+}
+
+@media (min-width: 720px) {
+  .examples {
+    flex-direction: row;
+    align-items: flex-end;
+    gap: var(--s-6);
+  }
+
+  .example {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: none;
+    margin: 0;
+  }
+
+  .example--wide {
+    flex-grow: 1.25;
+  }
+}
+
+/* How it works */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: var(--s-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  padding: var(--s-6);
+}
+
+.step__num {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 32px;
+  line-height: 1;
+  color: var(--accent);
+}
+
+.step__title {
+  margin: var(--s-4) 0 var(--s-2);
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.step p {
+  margin: 0;
+  color: var(--ink-soft);
+}
