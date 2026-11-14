@@ -45,12 +45,28 @@ async function loadExamples() {
     const res = await fetch('/img/examples/examples.json', { cache: 'no-cache' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const list = await res.json();
-    const valid = Array.isArray(list) ? list.filter((e) => e && typeof e === 'object').slice(0, 6) : [];
+    const valid = Array.isArray(list) ? list.filter((e) => e && typeof e === 'object') : [];
     if (valid.length >= 3) return valid;
   } catch {
     // Missing or unreadable: fall through to the built-in placeholders.
   }
   return FALLBACK_EXAMPLES;
+}
+
+/** Six entries for the wheel: the ones not marked `anatomy` when there are enough of them. */
+function wheelEntries(list) {
+  const plain = list.filter((e) => e.anatomy !== true);
+  return (plain.length >= 6 ? plain : list).slice(0, 6);
+}
+
+/** Resolves true once the image at `src` has loaded, false if it cannot. */
+function imageLoads(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(true);
+    img.onerror = () => resolve(false);
+    img.src = src;
+  });
 }
 
 /**
@@ -289,8 +305,9 @@ function setupWheel(wheel, entries) {
 }
 
 /* ---------- Anatomy ----------
-   Every part's box and marker is worked out from LAYOUTS and textLines, as fractions of the card,
-   so the markers land on the right parts for either orientation. */
+   Every part's box, and the point on it where its leader line ends (its anchor), is worked out
+   from LAYOUTS and textLines as fractions of the card, so the lines land on the right parts for
+   either orientation. Nothing is drawn on the card itself except those thin lines. */
 
 function anatomyParts(orientation, strings) {
   const L = LAYOUTS[orientation];
@@ -306,20 +323,20 @@ function anatomyParts(orientation, strings) {
   const stamp = { ...stampTopLeft, w: (Z.w * P.w) / W, h: (Z.h * P.h) / H };
 
   const parts = {
-    photo: { box: photo, marker: { x: photo.x + photo.w * 0.18, y: photo.y + photo.h * 0.5 } },
+    photo: { box: photo, anchor: { x: photo.x + photo.w * 0.18, y: photo.y + photo.h * 0.5 } },
     // An empty patch of paper: beside the stamp when the paper is below the photo, above it when beside.
     paper: {
       box: paper,
-      marker: orientation === 'horizontal' ? fromPaper(Z.x / 2, (Z.y + Z.h + 1) / 2) : fromPaper(0.5, Z.y / 2),
+      anchor: orientation === 'horizontal' ? fromPaper(Z.x / 2, (Z.y + Z.h + 1) / 2) : fromPaper(0.5, Z.y / 2),
     },
-    stamp: { box: stamp, marker: null },
+    stamp: { box: stamp, anchor: null },
   };
 
-  // The stamp's marker sits on the corner of its zone that faces the stamp's label.
+  // The stamp's line ends at the corner of its zone that faces the stamp's label.
   const stampOnLeft = stamp.x + stamp.w / 2 <= 0.5;
-  parts.stamp.marker = { x: stampOnLeft ? stamp.x : stamp.x + stamp.w, y: stamp.y };
+  parts.stamp.anchor = { x: stampOnLeft ? stamp.x : stamp.x + stamp.w, y: stamp.y };
 
-  // Text lines: the marker sits just past the end of its own line, so the three markers step
+  // Text lines: the line ends just past the end of its own text line, so the three ends step
   // apart sideways even where the lines are close together.
   const blockLeft = t.align === 'center' ? t.x - t.maxWidth / 2 : t.x;
   const aspect = P.w / P.h;
@@ -330,20 +347,26 @@ function anatomyParts(orientation, strings) {
     const end = line.align === 'center' ? line.x + width / 2 : line.x + width;
     parts[line.key] = {
       box: { x: top.x, y: top.y, w: (t.maxWidth * P.w) / W, h: (bandH * P.h) / H },
-      marker: { ...fromPaper(end, line.y), dx: TEXT_MARKER_GAP },
+      anchor: { ...fromPaper(end, line.y), dx: TEXT_ANCHOR_GAP },
     };
   }
   return parts;
 }
 
-// Pixels between the end of a text line and the centre of its marker.
-const TEXT_MARKER_GAP = 14;
+// Pixels between the end of a text line and the end of its leader line.
+const TEXT_ANCHOR_GAP = 8;
 
 /** Width of a printed line in the typewriter font, in the same units as `size` (paper widths). */
 function textWidth(text, size) {
   const ctx = document.createElement('canvas').getContext('2d');
   ctx.font = `100px '${FONT_FAMILY}', 'Courier New', monospace`;
   return (ctx.measureText(text).width / 100) * size;
+}
+
+function svg(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
 }
 
 function setupAnatomy(section, entry, index) {
@@ -363,8 +386,7 @@ function setupAnatomy(section, entry, index) {
 
   const pct = (n) => `${(n * 100).toFixed(3)}%`;
   const regions = {};
-  const markers = {};
-  labels.forEach((label, i) => {
+  labels.forEach((label) => {
     const key = label.dataset.part;
     const part = parts[key];
     if (!part) {
@@ -380,25 +402,17 @@ function setupAnatomy(section, entry, index) {
       width: pct(part.box.w),
       height: pct(part.box.h),
     });
-    const marker = document.createElement('span');
-    marker.className = 'anatomy__marker';
-    marker.dataset.part = key;
-    marker.textContent = String(i + 1);
-    marker.style.left = pct(part.marker.x);
-    marker.style.top = pct(part.marker.y);
-    if (part.marker.dx) marker.style.marginLeft = `${part.marker.dx}px`;
     regions[key] = region;
-    markers[key] = marker;
-    label.dataset.side = part.marker.x <= 0.5 ? 'left' : 'right';
+    label.dataset.side = part.anchor.x <= 0.5 ? 'left' : 'right';
   });
   // Big parts first so the smaller ones on top of them get the pointer.
-  partsLayer.append(...Object.values(regions), ...Object.values(markers));
+  partsLayer.replaceChildren(...Object.values(regions));
 
   // Linking: hovering or focusing a label lights its part, and hovering a part lights its label.
   let active = null;
   function paintActive() {
     figure.classList.toggle('has-active', Boolean(active));
-    const linked = [...labels, ...Object.values(regions), ...Object.values(markers), ...leaders.children];
+    const linked = [...labels, ...Object.values(regions), ...leaders.children];
     for (const el of linked) el.classList.toggle('is-active', el.dataset.part === active);
   }
   function setActive(key) {
@@ -406,7 +420,7 @@ function setupAnatomy(section, entry, index) {
     active = key;
     paintActive();
   }
-  for (const el of [...labels, ...Object.values(regions), ...Object.values(markers)]) {
+  for (const el of [...labels, ...Object.values(regions)]) {
     el.addEventListener('pointerenter', () => setActive(el.dataset.part));
     el.addEventListener('pointerleave', () => setActive(document.activeElement?.closest?.('.anatomy__label')?.dataset.part ?? null));
   }
@@ -415,8 +429,8 @@ function setupAnatomy(section, entry, index) {
     label.addEventListener('blur', () => setActive(null));
   });
 
-  // Wide screens: labels in two columns beside the card, at the height of their markers,
-  // joined by leader lines. Narrow screens: a plain numbered list (CSS), no lines.
+  // Wide screens: labels in two columns beside the card, level with their parts, joined to them
+  // by leader lines that end in a tiny dot. Narrow screens: a plain numbered list (CSS), no lines.
   function layoutLabels() {
     leaders.replaceChildren();
     if (!wide.matches) {
@@ -440,14 +454,14 @@ function setupAnatomy(section, entry, index) {
           return {
             label,
             key: label.dataset.part,
-            mx: cardLeft + part.marker.x * card.width + (part.marker.dx || 0),
-            my: cardTop + part.marker.y * card.height,
+            mx: cardLeft + part.anchor.x * card.width + (part.anchor.dx || 0),
+            my: cardTop + part.anchor.y * card.height,
             h: label.offsetHeight,
           };
         })
         .sort((a, b) => a.my - b.my);
 
-      // Each label's first line level with its marker, pushed apart where they would overlap.
+      // Each label's first line level with its anchor, pushed apart where they would overlap.
       const firstLine = 13;
       let bottom = -Infinity;
       for (const item of group) {
@@ -467,15 +481,13 @@ function setupAnatomy(section, entry, index) {
         const edge = side === 'left' ? cardLeft - 16 : cardLeft + card.width + 16;
         const endX = side === 'left' ? x + columnWidth + 8 : x - 8;
         const endY = item.top + firstLine;
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-        line.setAttribute('points', `${item.mx},${item.my} ${edge},${item.my} ${endX},${endY}`);
-        line.dataset.part = item.key;
-        const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        dot.setAttribute('cx', endX);
-        dot.setAttribute('cy', endY);
-        dot.setAttribute('r', 2.5);
-        dot.dataset.part = item.key;
-        leaders.append(line, dot);
+        const points = `${item.mx},${item.my} ${edge},${item.my} ${endX},${endY}`;
+        // A faint light halo under each line keeps it visible where it crosses a dark photo.
+        const halo = svg('polyline', { points, class: 'anatomy__halo' });
+        const line = svg('polyline', { points, 'data-part': item.key });
+        const dotHalo = svg('circle', { cx: item.mx, cy: item.my, r: 4, class: 'anatomy__halo' });
+        const dot = svg('circle', { cx: item.mx, cy: item.my, r: 2.5, 'data-part': item.key });
+        leaders.append(halo, dotHalo, line, dot);
       }
     }
     paintActive();
@@ -488,11 +500,21 @@ function setupAnatomy(section, entry, index) {
 }
 
 const examples = await loadExamples();
-setupWheel(document.getElementById('wheel'), examples);
-const anatomyIndex = Math.max(
+const wheel = wheelEntries(examples);
+setupWheel(document.getElementById('wheel'), wheel);
+
+// Anatomy card: the entry marked `"anatomy": true` once its image has loaded; otherwise the first
+// horizontal wheel example (drawn as a placeholder until, or unless, its own image loads).
+const marked = examples.find((e) => e.anatomy === true && e.file);
+const useMarked = marked ? await imageLoads(`/img/examples/${encodeURIComponent(marked.file)}`) : false;
+const fallbackIndex = Math.max(
   0,
-  examples.findIndex((e) => orientationOf(e) === 'horizontal'),
+  wheel.findIndex((e) => orientationOf(e) === 'horizontal'),
 );
-// The anatomy markers are placed from the typewriter font's real letter widths.
+// The leader lines are placed from the typewriter font's real letter widths.
 await document.fonts.load(`100px '${FONT_FAMILY}'`).catch(() => {});
-setupAnatomy(document.getElementById('anatomy'), examples[anatomyIndex], anatomyIndex);
+setupAnatomy(
+  document.getElementById('anatomy'),
+  useMarked ? marked : wheel[fallbackIndex],
+  useMarked ? 0 : fallbackIndex,
+);

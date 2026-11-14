@@ -11,7 +11,7 @@ before(() => {
   root = mkdtempSync(join(tmpdir(), 'postcard-agy-test-'));
   options.pollIntervalMs = 50;
   options.pollTimeoutMs = 2000;
-  options.replyIdleMs = 200;
+  options.keywordGraceMs = 1_000;
   options.quotaGraceMs = 100;
   options.noImageGraceMs = 300;
   options.log = (line) => logged.push(line);
@@ -148,17 +148,30 @@ test('generatePanel: finds the image that appears after agy has already exited',
   assert.equal(out.imagePath, join(brain, 'conv', 'panel.jpg'));
 });
 
-test('generatePanel: returns as soon as the reply names the finished image, without waiting for agy to exit', async () => {
-  const { brain, job } = setup(`printf img > "$BRAIN/final.jpg"; echo "$BRAIN/final.jpg"; echo '["a","b","c"]'; sleep 3; echo late > "${root}/late.txt"`);
+test('generatePanel: takes the first image and stops agy so it cannot draw a second one', async () => {
+  const { brain, job } = setup(`echo '["a","b","c"]'; printf img > "$BRAIN/first.jpg"; sleep 2; printf v2 > "$BRAIN/second.jpg"; echo late > "${root}/late.txt"`);
   const t0 = Date.now();
   const out = await generatePanel('horizontal', join(job, 'photo.jpg'), job, { keywords: true });
-  assert.ok(Date.now() - t0 < 2000, `took ${Date.now() - t0} ms`);
-  assert.equal(out.imagePath, join(brain, 'final.jpg'));
+  assert.ok(Date.now() - t0 < 1800, `took ${Date.now() - t0} ms`);
+  assert.equal(out.imagePath, join(brain, 'first.jpg'));
   assert.deepEqual(out.keywords, ['a', 'b', 'c']);
-  // agy is left to finish on its own (never killed mid-shutdown), and the next run waits for it.
-  const { job: job2 } = setup(`cat "${root}/late.txt" > "${root}/seen-late.txt" 2>/dev/null; printf x > "$BRAIN/p.png"`);
-  await generatePanel('horizontal', join(job2, 'photo.jpg'), job2);
-  assert.equal(readFileSync(join(root, 'seen-late.txt'), 'utf8'), 'late\n');
+  await new Promise((r) => setTimeout(r, 2500));
+  assert.equal(existsSync(join(brain, 'second.jpg')), false, 'agy was not stopped');
+  assert.equal(existsSync(join(root, 'late.txt')), false, 'agy was not stopped');
+});
+
+test('generatePanel: keywords printed after the image are still collected (within the grace)', async () => {
+  const { brain, job } = setup(`printf img > "$BRAIN/one.jpg"; sleep 0.6; echo '["x","y","z"]'; sleep 3`);
+  const out = await generatePanel('horizontal', join(job, 'photo.jpg'), job, { keywords: true });
+  assert.deepEqual(out, { imagePath: join(brain, 'one.jpg'), keywords: ['x', 'y', 'z'] });
+});
+
+test('generatePanel: missing keywords do not hold the image back past the grace', async () => {
+  const { brain, job } = setup(`printf img > "$BRAIN/one.jpg"; sleep 5`);
+  const t0 = Date.now();
+  const out = await generatePanel('horizontal', join(job, 'photo.jpg'), job, { keywords: true });
+  assert.ok(Date.now() - t0 < 3000, `took ${Date.now() - t0} ms`);
+  assert.deepEqual(out, { imagePath: join(brain, 'one.jpg'), keywords: [] });
 });
 
 test('generatePanel: an image still being written is not taken until its size settles', async () => {

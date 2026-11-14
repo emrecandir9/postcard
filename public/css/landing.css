@@ -341,26 +341,6 @@
   background: rgba(168, 69, 46, 0.1);
 }
 
-.anatomy__marker {
-  position: absolute;
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: #fff;
-  font: 600 11px/1 var(--font-ui);
-  box-shadow: 0 0 0 1.5px #fff;
-  transform: translate(-50%, -50%);
-  transition: transform 0.2s ease-out;
-  cursor: default;
-}
-
-.anatomy__marker.is-active {
-  transform: translate(-50%, -50%) scale(1.2);
-}
-
 .anatomy__leaders {
   display: none;
 }
@@ -465,7 +445,20 @@
 
   .anatomy__leaders circle {
     fill: var(--ink);
-    opacity: 0.45;
+    opacity: 0.35;
+  }
+
+  .anatomy__leaders .anatomy__halo {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 3;
+    opacity: 0.5;
+  }
+
+  .anatomy__leaders circle.anatomy__halo {
+    fill: #fff;
+    stroke: none;
+    opacity: 0.6;
   }
 
   .anatomy__leaders .is-active {
@@ -539,12 +532,6 @@
 /* ---------- Narrow screens: stack the hero, flatten the wheel ---------- */
 
 @media (max-width: 899.98px) {
-  .anatomy__marker {
-    width: 18px;
-    height: 18px;
-    font-size: 10px;
-  }
-
   .hero {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto;
@@ -601,7 +588,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .wheel__card,
-  .anatomy__marker,
   .anatomy__region {
     transition: none;
   }

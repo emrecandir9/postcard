@@ -111,3 +111,17 @@ async function dims(buffer) {
   const m = await sharp(buffer).metadata();
   return { width: m.width, height: m.height };
 }
+
+test('fitPanel trims a thin paper edge off every side of the panel', async () => {
+  // A 1376x768 panel (what Gemini returns) with a dark 1% frame, like a visible paper edge.
+  const w = 1376, h = 768, b = Math.round(w * 0.01);
+  const frame = await sharp({ create: { width: w, height: h, channels: 3, background: '#3a342c' } })
+    .composite([{ input: await solid(w - 2 * b, h - 2 * b, PANEL).png().toBuffer(), left: b, top: b }])
+    .png().toBuffer();
+  for (const orientation of ['horizontal', 'vertical']) {
+    const out = sharp(await fitPanel(frame, orientation, 1));
+    const { data, info } = await out.raw().toBuffer({ resolveWithObject: true });
+    const darkest = Math.min(...[0, info.width - 1].flatMap((x) => [0, info.height >> 1, info.height - 1].map((y) => data[(y * info.width + x) * info.channels])));
+    assert.ok(darkest > 100, `${orientation}: edge pixel still dark (${darkest})`);
+  }
+});

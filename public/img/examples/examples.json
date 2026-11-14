@@ -4,5 +4,6 @@
   { "file": "giza.jpg", "orientation": "horizontal", "location": "Giza, Egypt", "keywords": ["pyramids", "desert", "pharaohs"], "date": "MAR 2023" },
   { "file": "new-york.jpg", "orientation": "vertical", "location": "New York, USA", "keywords": ["skyline", "harbor", "lights"], "date": "SEP 2023" },
   { "file": "sydney.jpg", "orientation": "horizontal", "location": "Sydney, Australia", "keywords": ["harbour", "sails", "bridge"], "date": "FEB 2024" },
-  { "file": "torres-del-paine.jpg", "orientation": "vertical", "location": "Torres del Paine, Chile", "keywords": ["peaks", "granite", "patagonia"], "date": "NOV 2023" }
+  { "file": "torres-del-paine.jpg", "orientation": "vertical", "location": "Torres del Paine, Chile", "keywords": ["peaks", "granite", "patagonia"], "date": "NOV 2023" },
+  { "file": "cappadocia.jpg", "orientation": "horizontal", "location": "Cappadocia, Turkey", "keywords": ["balloons", "chimneys", "sunrise"], "date": "SEP 2024", "anatomy": true }
 ]

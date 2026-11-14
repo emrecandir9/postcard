@@ -51,7 +51,7 @@ readable after a restart (a small `<id>.json` is saved beside each `<id>.jpg`). 
 how long each stage took, plus the steps inside "drawing" (when agy's image appeared, when it replied).
 
 Optional settings in `.env`: `AGY_MODEL`, `AGY_EFFORT`, `AGY_AGENT` are passed to `agy` as `--model`,
-`--effort` and `--agent` (empty means agy's default).
+`--effort` and `--agent`. The model defaults to `gemini-4-hydrogen-high`; the others are empty, meaning agy's default.
 
 ## Tests
 
