@@ -8,7 +8,9 @@
     <link rel="stylesheet" href="/css/base.css" />
     <link rel="stylesheet" href="/css/postcard.css" />
     <link rel="stylesheet" href="/css/create.css" />
+    <link rel="stylesheet" href="/css/motion.css" />
     <script type="module" src="/js/create.js"></script>
+    <script type="module" src="/js/motion.js"></script>
   </head>
   <body>
     <header class="site-header">
@@ -21,9 +23,9 @@
     </header>
 
     <main class="wrap create">
-      <div class="create__intro">
+      <div class="create__intro" data-reveal>
         <h1 class="heading">Make a postcard</h1>
-        <p class="create__lede">The preview shows the final layout as you type. The stamp drawing is added when you create the postcard.</p>
+        <p class="create__lede">The preview shows the final layout as you type. Place and date are read from the photo when it has them. The stamp drawing is added when you create the postcard.</p>
       </div>
 
       <form id="postcard-form" class="create__grid" novalidate>
@@ -40,13 +42,14 @@
               <span class="dropzone__title" id="photo-title">Drop a photo here or <span class="dropzone__link">choose a file</span></span>
               <span class="dropzone__hint" id="photo-hint">JPEG, PNG, WebP, or HEIC if this browser can open it.</span>
             </label>
+            <p class="field__hint" id="photo-status" role="status"></p>
             <p class="field__error" id="photo-error" hidden></p>
           </div>
         </fieldset>
 
         <!-- Preview (sits right of the form on wide screens, under the photo on narrow ones) -->
         <section class="create__preview" aria-labelledby="preview-title">
-          <div class="card preview-card" id="preview-card">
+          <div class="card preview-card" id="preview-card" data-tilt>
             <div class="preview-card__head">
               <h2 class="preview-card__title" id="preview-title">Preview</h2>
               <span class="caption" id="preview-meta"></span>
@@ -55,37 +58,18 @@
             <div class="preview-card__stage" id="live">
               <div id="postcard"></div>
             </div>
-
-            <div class="result" id="result" hidden>
-              <img class="result__img" id="result-img" alt="" />
-              <p class="result__note" id="result-note" hidden></p>
-              <div class="result__actions">
-                <a class="btn btn--primary" id="download" href="#" download>Download</a>
-                <button class="btn btn--secondary" type="button" id="back">Back to editing</button>
-              </div>
-            </div>
-
-            <div class="progress" id="progress" hidden>
-              <div class="progress__bar" aria-hidden="true"><span></span></div>
-              <p class="progress__text" role="status" id="progress-text">Creating your postcard. This takes two to three minutes.</p>
-              <p class="progress__time caption"><span id="elapsed">0:00</span> elapsed</p>
-            </div>
-
-            <div class="alert" id="error" role="alert" hidden>
-              <p class="alert__text" id="error-text"></p>
-              <button class="btn btn--secondary" type="button" id="retry">Retry</button>
-            </div>
           </div>
         </section>
 
         <!-- 2-6. Details -->
-        <fieldset class="card create__fields" id="details-set">
+        <fieldset class="card create__fields" id="details-set" data-reveal data-reveal-delay="80">
           <legend class="visually-hidden">Details</legend>
 
           <div class="field">
-            <label class="label" for="location">Location</label>
-            <input class="input" id="location" name="location" type="text" autocomplete="off"
-                   placeholder="e.g. Big Sur, California" aria-describedby="location-error" />
+            <label class="label" for="location">Location <span class="label__optional">optional</span><span class="from-photo" id="location-from" hidden>from photo</span></label>
+            <input class="input" id="location" name="location" type="text" autocomplete="off" maxlength="100"
+                   placeholder="e.g. Big Sur, California" aria-describedby="location-hint location-error" />
+            <p class="field__hint" id="location-hint">Filled in from the photo when it has location data.</p>
             <p class="field__error" id="location-error" hidden></p>
           </div>
 
@@ -97,14 +81,14 @@
           </div>
 
           <fieldset class="field field--group">
-            <legend class="label">Date</legend>
+            <legend class="label">Date <span class="label__optional">optional</span></legend>
             <div class="field__row">
               <div>
-                <label class="sublabel" for="month">Month</label>
+                <label class="sublabel" for="month">Month<span class="from-photo" id="month-from" hidden>from photo</span></label>
                 <select class="input select" id="month" name="month"></select>
               </div>
               <div>
-                <label class="sublabel" for="year">Year</label>
+                <label class="sublabel" for="year">Year<span class="from-photo" id="year-from" hidden>from photo</span></label>
                 <input class="input" id="year" name="year" type="number" inputmode="numeric"
                        min="1000" max="9999" step="1" aria-describedby="year-error" />
               </div>
@@ -145,6 +129,10 @@
               <label class="label" for="message">Message <span class="label__optional">optional</span></label>
               <textarea class="input textarea" id="message" name="message" rows="4"></textarea>
             </div>
+          </div>
+
+          <div class="alert" id="error" role="alert" hidden>
+            <p class="alert__text" id="error-text"></p>
           </div>
 
           <button class="btn btn--primary btn--block create__submit" type="submit" id="submit">Create postcard</button>

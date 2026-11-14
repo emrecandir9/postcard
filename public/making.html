@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Making your postcard · Field Notes Postcard</title>
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/making.css" />
+    <script type="module" src="/js/making.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap site-header__inner">
+        <a class="brand" href="/">
+          <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="3" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 2.5"/><path d="M9 22l5-7 3 4 3-4 4 7z" fill="currentColor"/></svg>
+          Field Notes Postcard
+        </a>
+      </div>
+    </header>
+
+    <main class="wrap making">
+      <!-- Working -->
+      <section class="card making__card" id="working" aria-labelledby="stage-title">
+        <div class="scene" id="scene" aria-hidden="true">
+          <!-- preparing: the photo straightens and a crop frame closes in on it -->
+          <svg class="art art--preparing" data-art="preparing" viewBox="0 0 240 160">
+            <g class="prep__photo">
+              <rect x="50" y="34" width="140" height="92" fill="#cfdcdc"/>
+              <circle cx="160" cy="58" r="10" fill="#e9c27b"/>
+              <path d="M50 126 L50 104 L86 70 L108 92 L132 64 L190 112 L190 126 Z" fill="#7f9183"/>
+              <path d="M50 126 L50 116 L96 96 L130 110 L160 98 L190 120 L190 126 Z" fill="#5d6e62"/>
+            </g>
+            <g class="prep__shade" fill="#faf2ec" opacity="0.78">
+              <rect x="40" y="24" width="160" height="16"/>
+              <rect x="40" y="120" width="160" height="16"/>
+              <rect x="40" y="40" width="22" height="80"/>
+              <rect x="178" y="40" width="22" height="80"/>
+            </g>
+            <g class="prep__frame" fill="none" stroke="#3a342c" stroke-width="2.5" stroke-linecap="square">
+              <rect x="62" y="40" width="116" height="80" stroke-width="1" stroke-dasharray="4 3" opacity="0.7"/>
+              <path d="M62 52 V40 H74 M166 40 H178 V52 M178 108 V120 H166 M74 120 H62 V108"/>
+            </g>
+          </svg>
+
+          <!-- drawing: a rubber stamp presses down, lifts, and leaves a little drawing -->
+          <svg class="art art--drawing" data-art="drawing" viewBox="0 0 240 160">
+            <rect x="34" y="96" width="172" height="52" fill="#eae0ca"/>
+            <rect x="34" y="96" width="172" height="52" fill="none" stroke="#3a342c" stroke-opacity="0.12"/>
+            <g class="draw__ink" fill="none" stroke="#3a342c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+              <rect x="94" y="104" width="52" height="36" stroke-width="1.2" stroke-dasharray="3 2.5" opacity="0.6"/>
+              <path d="M100 134 L112 116 L120 126 L128 112 L140 134 Z" fill="#a8452e" fill-opacity="0.18"/>
+              <path d="M104 134 h32 M110 129 h6 M124 129 h8" stroke-width="1.2"/>
+              <circle cx="134" cy="112" r="3" />
+            </g>
+            <g class="draw__stamp">
+              <ellipse cx="120" cy="22" rx="14" ry="10" fill="#b8875a"/>
+              <rect x="114" y="28" width="12" height="26" rx="3" fill="#a07448"/>
+              <rect x="92" y="52" width="56" height="18" rx="3" fill="#6b4b34"/>
+              <rect x="94" y="70" width="52" height="7" fill="#a8452e"/>
+            </g>
+          </svg>
+
+          <!-- printing: typewriter letters appear one by one (letters added by making.js) -->
+          <div class="art art--printing" data-art="printing">
+            <div class="type-paper">
+              <svg class="type-paper__stamp" viewBox="0 0 52 40" aria-hidden="true">
+                <rect x="1" y="1" width="50" height="38" fill="none" stroke="#3a342c" stroke-width="1" stroke-dasharray="3 2.5" opacity="0.55"/>
+                <path d="M7 34 L19 15 L27 25 L35 11 L46 34 Z" fill="#a8452e" fill-opacity="0.18" stroke="#3a342c" stroke-width="1.6" stroke-linejoin="round"/>
+              </svg>
+              <div class="type-paper__lines" id="type-lines"></div>
+            </div>
+          </div>
+
+          <!-- finishing: the photo and the paper slide together into one card -->
+          <svg class="art art--finishing" data-art="finishing" viewBox="0 0 240 160">
+            <rect class="fin__shadow" x="56" y="34" width="128" height="102" fill="#1b1917" opacity="0.08"/>
+            <g class="fin__photo">
+              <rect x="54" y="30" width="76" height="102" fill="#cfdcdc"/>
+              <circle cx="108" cy="52" r="8" fill="#e9c27b"/>
+              <path d="M54 132 V100 L76 74 L92 92 L108 70 L130 98 V132 Z" fill="#7f9183"/>
+              <path d="M54 132 V118 L84 104 L106 114 L130 106 V132 Z" fill="#5d6e62"/>
+            </g>
+            <g class="fin__paper">
+              <rect x="130" y="30" width="52" height="102" fill="#eae0ca"/>
+              <path d="M142 74 L150 60 L156 68 L162 58 L170 74 Z" fill="#a8452e" fill-opacity="0.18" stroke="#3a342c" stroke-width="1.4" stroke-linejoin="round"/>
+              <path d="M141 96 h30 M146 104 h20 M150 111 h12" stroke="#3a342c" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+            </g>
+          </svg>
+        </div>
+
+        <div class="making__text" aria-live="polite">
+          <p class="making__eyebrow">Making your postcard</p>
+          <h1 class="heading making__title" id="stage-title">Preparing the photo</h1>
+          <p class="making__explain" id="stage-explain">Turning your photo upright and cropping it to the card.</p>
+        </div>
+
+        <ol class="steps" id="steps">
+          <li class="step" data-stage="preparing"><span class="step__mark" aria-hidden="true"><span class="step__num">1</span><svg class="step__tick" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="step__label">Preparing</span><span class="visually-hidden step__state"></span></li>
+          <li class="step" data-stage="drawing"><span class="step__mark" aria-hidden="true"><span class="step__num">2</span><svg class="step__tick" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="step__label">Drawing</span><span class="visually-hidden step__state"></span></li>
+          <li class="step" data-stage="printing"><span class="step__mark" aria-hidden="true"><span class="step__num">3</span><svg class="step__tick" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="step__label">Printing</span><span class="visually-hidden step__state"></span></li>
+          <li class="step" data-stage="finishing"><span class="step__mark" aria-hidden="true"><span class="step__num">4</span><svg class="step__tick" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="step__label">Finishing</span><span class="visually-hidden step__state"></span></li>
+        </ol>
+
+        <p class="making__time caption"><span id="elapsed">0:00</span> elapsed · <span id="time-note">usually one to three minutes</span></p>
+        <p class="making__offline" id="offline" hidden>Lost contact with the app. Trying again…</p>
+      </section>
+
+      <!-- Failed -->
+      <section class="card making__card making__message" id="failed" aria-labelledby="failed-title" hidden>
+        <h1 class="heading making__title" id="failed-title">That postcard didn't work out</h1>
+        <p class="making__explain making__error" id="failed-text"></p>
+        <a class="btn btn--primary" href="/create" id="try-again">Try again</a>
+      </section>
+
+      <!-- Unknown id -->
+      <section class="card making__card making__message" id="missing" aria-labelledby="missing-title" hidden>
+        <h1 class="heading making__title" id="missing-title">We can't find that postcard</h1>
+        <p class="making__explain">The link may be incomplete, or the postcard was never finished. You can make a new one.</p>
+        <a class="btn btn--primary" href="/create" id="missing-link">Make a postcard</a>
+      </section>
+    </main>
+  </body>
+</html>

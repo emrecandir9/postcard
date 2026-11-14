@@ -53,8 +53,7 @@
   }
 
   /* Keep the whole card in view on short laptop screens. */
-  .preview-card__stage .pc,
-  .result__img {
+  .preview-card__stage .pc {
     width: min(100%, calc((100dvh - 200px) * var(--pc-ratio, 1)));
     margin-inline: auto;
   }
@@ -93,6 +92,19 @@ fieldset.field--group {
   padding: 0;
   font-size: 15px;
   font-weight: 600;
+}
+
+.from-photo {
+  display: inline-block;
+  margin-left: var(--s-2);
+  padding: 1px var(--s-2);
+  border-radius: 999px;
+  background: var(--accent-wash);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  vertical-align: 1px;
 }
 
 .label__optional {
@@ -308,100 +320,8 @@ fieldset.field--group {
   line-height: 1.2;
 }
 
-.preview-card__stage {
-  transition: opacity 0.3s ease;
-}
-
 .preview-card__stage .pc {
   box-shadow: rgba(0, 0, 0, 0.08) 0 0 0 1px;
-}
-
-.is-busy .preview-card__stage {
-  opacity: 0.55;
-}
-
-.result {
-  animation: fade-in 0.3s ease;
-}
-
-.result__img {
-  width: 100%;
-  height: auto;
-  box-shadow: rgba(0, 0, 0, 0.08) 0 0 0 1px;
-}
-
-.result__note {
-  margin: var(--s-4) 0 0;
-}
-
-.result__note.is-error {
-  color: var(--accent);
-}
-
-.result__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-3);
-  margin-top: var(--s-4);
-}
-
-/* Progress */
-.progress {
-  margin-top: var(--s-4);
-  animation: fade-in 0.3s ease;
-}
-
-.progress__bar {
-  position: relative;
-  height: 4px;
-  overflow: hidden;
-  border-radius: 2px;
-  background: var(--hairline);
-}
-
-.progress__bar span {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 30%;
-  border-radius: 2px;
-  background: var(--ink);
-  animation: progress-slide 1.6s ease-in-out infinite;
-}
-
-.progress__text {
-  margin: var(--s-3) 0 0;
-  font-weight: 500;
-}
-
-.progress__time {
-  margin: var(--s-1) 0 0;
-  font-variant-numeric: tabular-nums;
-}
-
-@keyframes progress-slide {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(340%);
-  }
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .progress__bar span {
-    width: 100%;
-    animation: none;
-    opacity: 0.35;
-  }
 }
 
 /* Error */
@@ -411,7 +331,7 @@ fieldset.field--group {
   align-items: center;
   justify-content: space-between;
   gap: var(--s-3);
-  margin-top: var(--s-4);
+  margin-top: var(--s-8);
   padding: var(--s-4);
   border: 1px solid #ebc8bc;
   border-radius: var(--radius-card);
@@ -421,4 +341,8 @@ fieldset.field--group {
 .alert__text {
   flex: 1 1 14rem;
   margin: 0;
+}
+
+.alert + .create__submit {
+  margin-top: var(--s-4);
 }

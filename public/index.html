@@ -8,10 +8,12 @@
     <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/css/base.css" />
     <link rel="stylesheet" href="/css/postcard.css" />
+    <link rel="stylesheet" href="/css/motion.css" />
     <link rel="stylesheet" href="/css/landing.css" />
+    <script type="module" src="/js/motion.js"></script>
     <script type="module" src="/js/landing.js"></script>
   </head>
-  <body>
+  <body class="landing">
     <header class="site-header">
       <div class="wrap site-header__inner">
         <a class="brand" href="/">
@@ -23,73 +25,127 @@
     </header>
 
     <main>
-      <section class="hero wrap">
-        <h1 class="display">Travel photos, kept as field notes</h1>
-        <p class="hero__lede">
-          Upload a photo and name the place. You get a postcard with a small rubber-stamp drawing of the
-          scene and typewriter notes on aged paper. Download it, or schedule it to arrive by email.
-        </p>
-        <div class="hero__actions">
-          <a class="btn btn--primary" href="/create">Create postcard</a>
-          <a class="btn btn--secondary" href="#how">How it works</a>
+      <!-- Hero: text on the left, the postcard wheel on the right. -->
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero__text">
+          <h1 class="display hero__title" id="hero-title" data-reveal>Travel photos, kept as field notes</h1>
+          <p class="hero__lede" data-reveal data-reveal-delay="100">
+            Upload a photo. You get a postcard with a small rubber-stamp print of the scene and typewriter
+            notes on aged paper, ready to download or to arrive by email.
+          </p>
+          <div class="hero__actions" data-reveal data-reveal-delay="200">
+            <a class="btn btn--primary" href="/create">Create postcard</a>
+            <a class="hero__more" href="#anatomy">What's on a card</a>
+          </div>
+        </div>
+
+        <div class="wheel" id="wheel" role="region" aria-roledescription="carousel" aria-label="Example postcards" data-reveal data-reveal-delay="150">
+          <div class="wheel__ring"></div>
+          <div class="wheel__bar">
+            <button class="wheel__nav" type="button" data-step="-1" aria-label="Previous postcard">
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <p class="wheel__caption" aria-live="off"></p>
+            <button class="wheel__nav" type="button" data-step="1" aria-label="Next postcard">
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
         </div>
       </section>
 
-      <section class="section wrap" aria-labelledby="examples-title">
-        <h2 class="heading section__title" id="examples-title">From the notebook</h2>
-        <div class="examples">
-          <figure class="example example--square">
-            <!-- EXAMPLE 1: horizontal photo, square card.
-                 To use a real postcard, replace the whole <div class="pc-sample" ...></div> below with:
-                 <img class="example__img" src="/img/example-1.jpg" alt="Postcard from Big Sur" width="2048" height="2048"> -->
-            <div class="pc-sample" data-orientation="horizontal" data-tone="sea"
-                 data-location="Big Sur" data-keywords="salt, fog, cliffs" data-month="Oct" data-year="2026"
-                 role="img" aria-label="Example postcard from Big Sur (placeholder)"></div>
-            <figcaption class="caption">Horizontal photo, square card</figcaption>
-          </figure>
+      <!-- Anatomy: one postcard with its parts labelled. Marker positions come from shared/layout.js. -->
+      <section class="screen anatomy" id="anatomy" aria-labelledby="anatomy-title">
+        <div class="screen__inner">
+          <header class="screen__head">
+            <h2 class="heading" id="anatomy-title" data-reveal>Anatomy of a postcard</h2>
+            <p class="screen__lede" data-reveal data-reveal-delay="100">Every card is put together the same way, from your photo and a few words.</p>
+          </header>
 
-          <figure class="example example--wide">
-            <!-- EXAMPLE 2: vertical photo, 5:4 card.
-                 To use a real postcard, replace the whole <div class="pc-sample" ...></div> below with:
-                 <img class="example__img" src="/img/example-2.jpg" alt="Postcard from Lisbon" width="2400" height="1920"> -->
-            <div class="pc-sample" data-orientation="vertical" data-tone="sand"
-                 data-location="Lisbon" data-keywords="tiles, trams, hills" data-month="May" data-year="2026"
-                 role="img" aria-label="Example postcard from Lisbon (placeholder)"></div>
-            <figcaption class="caption">Vertical photo, 5:4 card</figcaption>
-          </figure>
-
-          <figure class="example example--square">
-            <!-- EXAMPLE 3: horizontal photo, square card.
-                 To use a real postcard, replace the whole <div class="pc-sample" ...></div> below with:
-                 <img class="example__img" src="/img/example-3.jpg" alt="Postcard from the Dolomites" width="2048" height="2048"> -->
-            <div class="pc-sample" data-orientation="horizontal" data-tone="sage"
-                 data-location="Dolomites" data-keywords="larch, scree, quiet" data-month="Sep" data-year="2025"
-                 role="img" aria-label="Example postcard from the Dolomites (placeholder)"></div>
-            <figcaption class="caption">Horizontal photo, square card</figcaption>
-          </figure>
+          <div class="anatomy__figure" data-reveal data-reveal-delay="150">
+            <div class="anatomy__card">
+              <div class="anatomy__face"></div>
+              <div class="anatomy__parts" aria-hidden="true"></div>
+            </div>
+            <svg class="anatomy__leaders" aria-hidden="true"></svg>
+            <ol class="anatomy__labels">
+              <li class="anatomy__label" data-part="photo" tabindex="0"><span class="anatomy__num" aria-hidden="true">1</span><span><strong>Your photo</strong> Cropped to a fixed shape, otherwise untouched.</span></li>
+              <li class="anatomy__label" data-part="paper" tabindex="0"><span class="anatomy__num" aria-hidden="true">2</span><span><strong>Aged paper</strong> Drawn fresh for each card.</span></li>
+              <li class="anatomy__label" data-part="stamp" tabindex="0"><span class="anatomy__num" aria-hidden="true">3</span><span><strong>Rubber stamp</strong> A small print of the scene, carved from your photo in 2–4 inks.</span></li>
+              <li class="anatomy__label" data-part="location" tabindex="0"><span class="anatomy__num" aria-hidden="true">4</span><span><strong>Location</strong></span></li>
+              <li class="anatomy__label" data-part="keywords" tabindex="0"><span class="anatomy__num" aria-hidden="true">5</span><span><strong>Three words</strong> Yours, or suggested from the photo.</span></li>
+              <li class="anatomy__label" data-part="date" tabindex="0"><span class="anatomy__num" aria-hidden="true">6</span><span><strong>Month and year</strong></span></li>
+            </ol>
+          </div>
         </div>
       </section>
 
-      <section class="section wrap" id="how" aria-labelledby="how-title">
-        <h2 class="heading section__title" id="how-title">How it works</h2>
-        <ol class="steps">
-          <li class="card step">
-            <span class="step__num" aria-hidden="true">1</span>
-            <h3 class="step__title">Upload a photo</h3>
-            <p>Any travel photo. Wide photos become a square card with the paper below; tall or square photos sit beside the paper.</p>
-          </li>
-          <li class="card step">
-            <span class="step__num" aria-hidden="true">2</span>
-            <h3 class="step__title">Name the place</h3>
-            <p>Add the location, the month, and up to three words. Leave the words blank and Gemini suggests them from the photo.</p>
-          </li>
-          <li class="card step">
-            <span class="step__num" aria-hidden="true">3</span>
-            <h3 class="step__title">Keep it or send it</h3>
-            <p>About a minute later the stamp is drawn. Download the postcard, or schedule it to arrive by email on a date you pick.</p>
-          </li>
-        </ol>
-        <p class="section__cta"><a class="btn btn--primary" href="/create">Create postcard</a></p>
+      <!-- How it works -->
+      <section class="screen how" id="how" aria-labelledby="how-title">
+        <div class="screen__inner">
+          <header class="screen__head">
+            <h2 class="heading" id="how-title" data-reveal>How it works</h2>
+            <p class="screen__lede" data-reveal data-reveal-delay="100">Three steps, and a short wait while the stamp is carved.</p>
+          </header>
+
+          <ol class="steps">
+            <li class="step" data-reveal data-reveal-delay="0">
+              <div class="card step__card" data-tilt>
+                <div class="step__art">
+                  <svg viewBox="0 0 200 130" aria-hidden="true">
+                    <g transform="rotate(-4 100 65)">
+                      <rect x="44" y="20" width="112" height="84" fill="#fff" stroke="currentColor" stroke-width="2"/>
+                      <rect x="52" y="28" width="96" height="60" fill="#dfe6e6"/>
+                      <path d="M52 88l26-30 16 17 12-11 42 24z" fill="#b9c4b0" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                      <circle cx="124" cy="44" r="7" fill="#e7b9a6"/>
+                    </g>
+                    <circle cx="150" cy="100" r="18" fill="var(--accent)"/>
+                    <path d="M150 109v-17m-7 7l7-7 7 7" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <span class="step__num" aria-hidden="true">1</span>
+                <h3 class="step__title">Upload a photo</h3>
+                <p>Any travel photo. Wide ones become a square card with the paper below; tall ones sit beside the paper.</p>
+              </div>
+            </li>
+            <li class="step" data-reveal data-reveal-delay="120">
+              <div class="card step__card" data-tilt>
+                <div class="step__art">
+                  <svg viewBox="0 0 200 130" aria-hidden="true">
+                    <path d="M58 26c-11 0-20 9-20 20 0 15 20 36 20 36s20-21 20-36c0-11-9-20-20-20z" fill="var(--accent-wash)" stroke="var(--accent)" stroke-width="2"/>
+                    <circle cx="58" cy="46" r="6" fill="none" stroke="var(--accent)" stroke-width="2"/>
+                    <rect x="92" y="30" width="78" height="12" rx="2" fill="currentColor" opacity="0.85"/>
+                    <rect x="92" y="54" width="22" height="9" rx="2" fill="currentColor" opacity="0.4"/>
+                    <rect x="119" y="54" width="26" height="9" rx="2" fill="currentColor" opacity="0.4"/>
+                    <rect x="150" y="54" width="20" height="9" rx="2" fill="currentColor" opacity="0.4"/>
+                    <rect x="92" y="74" width="44" height="9" rx="2" fill="currentColor" opacity="0.4"/>
+                    <path d="M30 104h140" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.5"/>
+                  </svg>
+                </div>
+                <span class="step__num" aria-hidden="true">2</span>
+                <h3 class="step__title">Add a place and a few words</h3>
+                <p>Type them in, or leave them blank: the place and date come from the photo's own data, and the words are suggested.</p>
+              </div>
+            </li>
+            <li class="step" data-reveal data-reveal-delay="240">
+              <div class="card step__card" data-tilt>
+                <div class="step__art">
+                  <svg viewBox="0 0 200 130" aria-hidden="true">
+                    <rect x="30" y="34" width="86" height="60" fill="#fff" stroke="currentColor" stroke-width="2"/>
+                    <path d="M30 34l43 32 43-32" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                    <rect x="96" y="40" width="14" height="16" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="2 2"/>
+                    <rect x="134" y="28" width="40" height="52" fill="#fff" stroke="currentColor" stroke-width="2"/>
+                    <rect x="134" y="28" width="40" height="29" fill="#dfe6e6"/>
+                    <path d="M154 86v20m-8-8l8 8 8-8" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <span class="step__num" aria-hidden="true">3</span>
+                <h3 class="step__title">Download it, or schedule it</h3>
+                <p>Save the postcard, or pick a date and it arrives by email, like a note from the trip.</p>
+              </div>
+            </li>
+          </ol>
+          <p class="how__cta" data-reveal data-reveal-delay="300"><a class="btn btn--primary" href="/create">Create postcard</a></p>
+        </div>
       </section>
     </main>
 

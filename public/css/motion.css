@@ -1,0 +1,51 @@
+/* Scroll reveals and pointer tilt (js/motion.js). Hiding only happens under .motion-ready,
+   which motion.js sets, so content stays visible if JavaScript does not run.
+   Reveals use the `translate` property and tilt uses `transform`, so one element can have both. */
+
+.motion-ready [data-reveal] {
+  transition:
+    opacity 0.6s ease-out var(--reveal-delay, 0ms),
+    translate 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) var(--reveal-delay, 0ms);
+}
+
+.motion-ready [data-reveal]:not(.is-revealed) {
+  opacity: 0;
+  translate: 0 18px;
+}
+
+.motion-ready [data-tilt] {
+  transition:
+    transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1),
+    box-shadow 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.motion-ready [data-reveal][data-tilt] {
+  transition:
+    opacity 0.6s ease-out var(--reveal-delay, 0ms),
+    translate 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) var(--reveal-delay, 0ms),
+    transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1),
+    box-shadow 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.motion-ready [data-tilt].is-tilting {
+  transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)) translateY(-4px);
+  box-shadow:
+    rgba(0, 0, 0, 0.08) 0 0 0 1px,
+    rgba(27, 25, 23, 0.28) 0 22px 40px -22px;
+  transition-duration: 0.6s, 0.6s, 0.15s, 0.3s;
+}
+
+.motion-ready [data-tilt].is-tilting:not([data-reveal]) {
+  transition-duration: 0.15s, 0.3s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    opacity: 1 !important;
+    translate: none !important;
+  }
+
+  [data-tilt] {
+    transform: none !important;
+  }
+}

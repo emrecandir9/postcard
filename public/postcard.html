@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Your postcard · Field Notes Postcard</title>
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/result.css" />
+    <link rel="stylesheet" href="/css/motion.css" />
+    <script type="module" src="/js/result.js"></script>
+    <script type="module" src="/js/motion.js"></script>
+  </head>
+  <body class="result-page">
+    <main class="result" id="ready" hidden>
+      <h1 class="visually-hidden" id="result-title">Your postcard</h1>
+      <div class="result__stage">
+        <img class="result__img" id="result-img" alt="" data-tilt />
+      </div>
+      <div class="result__bar">
+        <p class="result__note" id="result-note" hidden></p>
+        <div class="result__actions">
+          <a class="btn btn--secondary" href="/create">Make another</a>
+          <a class="btn btn--primary" id="download" href="#" download>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 19h14"/></svg>
+            Download
+          </a>
+        </div>
+      </div>
+    </main>
+
+    <main class="result-message" id="message" hidden>
+      <div class="card result-message__card">
+        <h1 class="heading result-message__title" id="message-title">We can't find that postcard</h1>
+        <p class="result-message__text" id="message-text">The link may be incomplete, or the postcard was never finished. You can make a new one.</p>
+        <a class="btn btn--primary" href="/create" id="message-link">Make a postcard</a>
+      </div>
+    </main>
+  </body>
+</html>

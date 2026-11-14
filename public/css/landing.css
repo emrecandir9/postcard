@@ -1,132 +1,527 @@
-/* Landing page. */
+/* Landing page: hero with the postcard wheel, anatomy, how it works.
+   Each section fills about one desktop screen. */
+
+.landing {
+  /* Side padding for the full-width hero and header. */
+  --page-pad: max(var(--gutter), 5vw);
+}
+
+/* The header sits on top of the hero, so header + hero together make the first screen. */
+.landing .site-header {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 400;
+}
+
+.landing .site-header .wrap {
+  max-width: none;
+  padding-inline: var(--page-pad);
+}
 
 .header-cta {
   min-height: 44px;
   padding-inline: var(--s-4);
 }
 
+/* ---------- Hero ---------- */
+
 .hero {
-  padding-block: clamp(40px, 7vw, 96px) var(--s-16);
-  text-align: center;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 32%) minmax(0, 1fr);
+  min-height: 100svh;
+  padding-left: var(--page-pad);
+  /* The wheel runs off the right edge on purpose; never let it widen the page. */
+  overflow: clip;
 }
 
-.hero .display {
-  max-width: 13ch;
-  margin-inline: auto;
+.hero__text {
+  align-self: center;
+  padding-block: 112px 64px;
+}
+
+.hero__title {
+  font-size: clamp(40px, 3.6vw, 72px);
+  max-width: 11ch;
 }
 
 .hero__lede {
-  max-width: 34rem;
-  margin: var(--s-6) auto 0;
-  font-size: 18px;
+  max-width: 30rem;
+  margin: var(--s-6) 0 0;
+  font-size: clamp(16px, 0.35vw + 13px, 19px);
   color: var(--ink-soft);
 }
 
 .hero__actions {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--s-3);
+  align-items: center;
+  gap: var(--s-3) var(--s-6);
   margin-top: var(--s-8);
 }
 
-.section {
-  padding-bottom: var(--s-16);
+.hero__more {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--ink);
+  text-underline-offset: 4px;
 }
 
-.section__title {
-  margin-bottom: var(--s-8);
-  text-align: center;
+/* ---------- The wheel ----------
+   js/landing.js gives each card --c and --s, the cosine and sine of its angle on the wheel
+   (main card: c = 1, s = 0). Everything below is built from those two numbers. */
+
+.wheel {
+  --card-h: min(58svh, 44cqw);
+  --origin-x: 34%;
+  /* Desktop: a circle whose centre is to the right of the main card, seen partly in perspective. */
+  --arc-x: calc(var(--card-h) * 0.8); /* radius across */
+  --arc-y: calc(var(--card-h) * 0.6); /* radius up and down */
+  --swing-x: 0px;
+  --turn-y: 22deg; /* cards turn away as they go round */
+  --swing-turn: 0deg;
+  --tip-x: 16deg; /* upper cards lean back, lower cards lean forward */
+  --lean: 7deg; /* cards follow the curve */
+  --shrink: 0.56;
+  --shrink-curve: 0.18;
+
+  position: relative;
+  min-height: 420px;
+  container-type: inline-size;
 }
 
-.section__cta {
-  margin: var(--s-10) 0 0;
-  text-align: center;
+.wheel__ring {
+  position: absolute;
+  inset: 0;
+  perspective: 1600px;
+  perspective-origin: var(--origin-x) 50%;
+  touch-action: pan-y;
 }
 
-/* Example postcards: a row on wide screens, a column on narrow ones.
-   Flex-grow follows each card's width:height (1:1 and 5:4) so all three end up the same height. */
-.examples {
+.wheel__card {
+  --c: 1;
+  --s: 0;
+  --away: calc(1 - var(--c)); /* 0 for the main card, 2 for the one at the back */
+
+  position: absolute;
+  left: var(--origin-x);
+  top: 50%;
+  width: var(--card-h);
+  height: var(--card-h);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transform: translate(-50%, -50%)
+    translate(
+      calc(var(--away) * var(--arc-x) + var(--s) * var(--swing-x)),
+      calc(var(--s) * var(--arc-y))
+    )
+    rotateY(calc(var(--away) * var(--turn-y) + var(--s) * var(--swing-turn)))
+    rotateX(calc(var(--s) * var(--tip-x) * -1))
+    rotateZ(calc(var(--s) * var(--lean)))
+    scale(calc(1 - var(--away) * var(--shrink) + var(--away) * var(--away) * var(--shrink-curve)));
+  /* The card at the back of the wheel fades out completely. */
+  opacity: clamp(0, calc((var(--c) + 0.92) * 3.5), 1);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wheel__card[data-orientation='vertical'] {
+  width: calc(var(--card-h) * 1.25);
+}
+
+.wheel__card.is-main {
+  cursor: default;
+}
+
+.wheel__card.is-back {
+  pointer-events: none;
+}
+
+.wheel__card:focus-visible {
+  outline: none;
+}
+
+.wheel__card:focus-visible .wheel__face {
+  outline: 2px solid var(--accent);
+  outline-offset: 6px;
+}
+
+/* Cards further round the wheel fade a little into the page. */
+.wheel__card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--canvas);
+  opacity: calc(var(--away) * 0.3);
+  pointer-events: none;
+}
+
+.wheel__face {
+  width: 100%;
+  height: 100%;
+  box-shadow:
+    rgba(0, 0, 0, 0.06) 0 0 0 1px,
+    rgba(27, 25, 23, 0.18) 0 18px 36px -24px;
+}
+
+.wheel__bar {
+  position: absolute;
+  z-index: 300;
+  left: var(--origin-x);
+  top: calc(50% + var(--card-h) / 2 + 20px);
   display: flex;
-  flex-direction: column;
-  gap: var(--s-8);
+  align-items: center;
+  gap: var(--s-3);
+  transform: translateX(-50%);
 }
 
-.example {
-  width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
+.wheel__caption {
+  min-width: 15ch;
+  margin: 0;
+  padding: 2px 8px;
+  font-family: 'Special Elite', 'Courier New', monospace;
+  font-size: var(--fs-caption);
+  letter-spacing: 0.04em;
+  text-align: center;
+  white-space: nowrap;
+  color: var(--ink-soft);
+  background: var(--canvas);
 }
 
-.example .pc,
-.example__img {
-  width: 100%;
-  height: auto;
+.wheel__nav {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--card);
   box-shadow: var(--shadow);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 
-.example figcaption {
-  margin-top: var(--s-3);
+.wheel__nav:hover {
+  background: var(--accent-wash);
+}
+
+/* Before the script has placed the cards, keep the controls out of the way. */
+.wheel:not(.is-ready) .wheel__bar {
+  visibility: hidden;
+}
+
+/* ---------- Example postcards (wheel and anatomy) ---------- */
+
+.example-pc {
+  position: relative;
+  overflow: hidden;
+  background: #eae0ca;
+}
+
+.example-pc .pc {
+  height: 100%;
+}
+
+.example-pc__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.example-pc .pc__stamp {
+  border: 0;
+  padding: 2%;
+}
+
+.stamp-sketch {
+  width: 92%;
+  height: 92%;
+  color: var(--pc-ink);
+}
+
+/* Photo areas of the CSS drawings: soft landscape gradients, until the real photo loads. */
+.pc[data-tone='sea'] {
+  --pc-photo-tone: linear-gradient(#c9d4dc 0 48%, #9fb0b8 48% 100%);
+}
+
+.pc[data-tone='sand'] {
+  --pc-photo-tone: linear-gradient(#e7d9c6 0 55%, #cdb596 55% 100%);
+}
+
+.pc[data-tone='sage'] {
+  --pc-photo-tone: linear-gradient(#d6dccf 0 40%, #a6b096 40% 100%);
+}
+
+.pc[data-tone='dusk'] {
+  --pc-photo-tone: linear-gradient(#d8c6cf 0 50%, #a9939d 50% 100%);
+}
+
+.pc[data-tone='stone'] {
+  --pc-photo-tone: linear-gradient(#e0dbd3 0 45%, #b4aca1 45% 100%);
+}
+
+.pc[data-tone='sky'] {
+  --pc-photo-tone: linear-gradient(#cfdbe6 0 60%, #b2bfa4 60% 100%);
+}
+
+/* ---------- Full-screen sections ---------- */
+
+.screen {
+  display: grid;
+  align-items: center;
+  min-height: 100svh;
+  padding-block: var(--s-16);
+}
+
+.screen__inner {
+  width: 100%;
+  max-width: 1360px;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.screen__head {
+  max-width: 40rem;
+  margin: 0 auto var(--s-10);
   text-align: center;
 }
 
-.pc-sample[data-tone='sea'] {
-  --pc-photo-tone: #c3cbcd;
+.screen__lede {
+  margin: var(--s-3) 0 0;
+  font-size: 18px;
+  color: var(--ink-soft);
 }
 
-.pc-sample[data-tone='sand'] {
-  --pc-photo-tone: #d8ccb9;
+/* ---------- Anatomy ---------- */
+
+.anatomy .screen__inner {
+  max-width: 1600px;
 }
 
-.pc-sample[data-tone='sage'] {
-  --pc-photo-tone: #c6ccbd;
+.anatomy__figure {
+  position: relative;
 }
 
-@media (min-width: 720px) {
-  .examples {
-    flex-direction: row;
-    align-items: flex-end;
-    gap: var(--s-6);
+.anatomy__card {
+  --ratio: 1;
+  position: relative;
+  width: min(100%, 560px);
+  margin-inline: auto;
+}
+
+.anatomy__pc {
+  width: 100%;
+  box-shadow:
+    rgba(0, 0, 0, 0.06) 0 0 0 1px,
+    rgba(27, 25, 23, 0.2) 0 24px 48px -28px;
+}
+
+.anatomy__parts {
+  position: absolute;
+  inset: 0;
+}
+
+.anatomy__region {
+  position: absolute;
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  transition:
+    outline-color 0.2s ease-out,
+    background-color 0.2s ease-out;
+}
+
+.anatomy__region.is-active {
+  outline-color: var(--accent);
+  background: rgba(168, 69, 46, 0.1);
+}
+
+.anatomy__marker {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font: 600 11px/1 var(--font-ui);
+  box-shadow: 0 0 0 1.5px #fff;
+  transform: translate(-50%, -50%);
+  transition: transform 0.2s ease-out;
+  cursor: default;
+}
+
+.anatomy__marker.is-active {
+  transform: translate(-50%, -50%) scale(1.2);
+}
+
+.anatomy__leaders {
+  display: none;
+}
+
+.anatomy__labels {
+  max-width: 560px;
+  margin: var(--s-6) auto 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--s-2);
+}
+
+.anatomy__label {
+  display: flex;
+  gap: var(--s-3);
+  align-items: flex-start;
+  padding: var(--s-2) var(--s-3);
+  border-radius: 8px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  transition: background-color 0.2s ease-out;
+}
+
+.anatomy__label:focus-visible {
+  outline-offset: 0;
+}
+
+.anatomy__label strong {
+  display: block;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.anatomy__label.is-active {
+  background: var(--accent-wash);
+}
+
+.anatomy__num {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font: 600 12px/1 var(--font-ui);
+}
+
+@media (min-width: 900px) {
+  .anatomy__card {
+    /* As big as the screen allows, leaving room for the heading and two label columns. */
+    height: min(calc(100svh - 300px), 720px, calc((100vw - 2 * var(--gutter) - 640px) / var(--ratio)));
+    width: auto;
+    aspect-ratio: var(--ratio);
   }
 
-  .example {
-    flex: 1 1 0;
-    min-width: 0;
+  .anatomy__card[data-orientation='vertical'] {
+    height: min(calc(100svh - 300px), 620px, calc((100vw - 2 * var(--gutter) - 640px) / var(--ratio)));
+  }
+
+  .anatomy__labels {
+    position: absolute;
+    inset: 0;
     max-width: none;
     margin: 0;
+    pointer-events: none;
   }
 
-  .example--wide {
-    flex-grow: 1.25;
+  .anatomy__label {
+    position: absolute;
+    pointer-events: auto;
+  }
+
+  .anatomy__label[data-side='left'] {
+    flex-direction: row-reverse;
+    text-align: right;
+  }
+
+  .anatomy__leaders {
+    display: block;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .anatomy__leaders polyline {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 1;
+    opacity: 0.35;
+    transition:
+      opacity 0.2s ease-out,
+      stroke 0.2s ease-out;
+  }
+
+  .anatomy__leaders circle {
+    fill: var(--ink);
+    opacity: 0.45;
+  }
+
+  .anatomy__leaders .is-active {
+    stroke: var(--accent);
+    fill: var(--accent);
+    opacity: 1;
+  }
+
+  .anatomy__leaders polyline.is-active {
+    fill: none;
+    stroke-width: 1.5;
   }
 }
 
-/* How it works */
+/* ---------- How it works ---------- */
+
 .steps {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
-  gap: var(--s-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: var(--s-6);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.step {
-  padding: var(--s-6);
+.step__card {
+  height: 100%;
+}
+
+.step__art {
+  display: grid;
+  place-items: center;
+  height: clamp(120px, 22svh, 260px);
+  margin-bottom: var(--s-6);
+  border-radius: 8px;
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+.step__art svg {
+  width: 78%;
+  height: 86%;
 }
 
 .step__num {
   display: block;
   font-family: var(--font-display);
-  font-size: 32px;
+  font-size: 28px;
   line-height: 1;
   color: var(--accent);
 }
 
 .step__title {
-  margin: var(--s-4) 0 var(--s-2);
+  margin: var(--s-3) 0 var(--s-2);
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: 23px;
   font-weight: 400;
   line-height: 1.2;
 }
@@ -134,4 +529,80 @@
 .step p {
   margin: 0;
   color: var(--ink-soft);
+}
+
+.how__cta {
+  margin: var(--s-10) 0 0;
+  text-align: center;
+}
+
+/* ---------- Narrow screens: stack the hero, flatten the wheel ---------- */
+
+@media (max-width: 899.98px) {
+  .anatomy__marker {
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+  }
+
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    min-height: 0;
+    padding-inline: 0;
+  }
+
+  .hero__text {
+    padding: 104px var(--gutter) var(--s-6);
+  }
+
+  .hero__title {
+    max-width: 18ch;
+  }
+
+  .wheel {
+    /* A flat row: the main card in the middle, its neighbours peeking in from the sides. */
+    --card-h: min(52cqw, 42svh, 380px);
+    --origin-x: 50%;
+    --arc-x: 0px;
+    --arc-y: 0px;
+    --swing-x: calc(var(--card-h) * 0.82);
+    --turn-y: 0deg;
+    --swing-turn: 28deg;
+    --tip-x: 0deg;
+    --lean: 0deg;
+    --shrink: 0.2;
+    --shrink-curve: 0;
+
+    min-height: 0;
+    height: calc(var(--card-h) + 104px);
+  }
+
+  .wheel__ring {
+    bottom: 60px;
+  }
+
+  .wheel__bar {
+    top: auto;
+    bottom: 8px;
+    width: min(calc(100% - 2 * var(--gutter)), 480px);
+  }
+
+  .wheel__caption {
+    flex: 1;
+    min-width: 0;
+    white-space: normal;
+  }
+
+  .screen {
+    min-height: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wheel__card,
+  .anatomy__marker,
+  .anatomy__region {
+    transition: none;
+  }
 }

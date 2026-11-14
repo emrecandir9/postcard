@@ -1,14 +1,14 @@
-// Create page: form, live preview and the submit flow (HTTP contract in the plan).
+// Create page: form, live preview, photo metadata autofill and the submit (HTTP contract v2 in the plan).
 import { LAYOUTS, MONTHS, orientationOf, displayText } from '/shared/layout.js';
-import { mountPostcard, ratioLabel } from './postcard.js';
+import { mountPostcard, ratioLabel, PLACEHOLDERS } from './postcard.js';
 
 const $ = (id) => document.getElementById(id);
 
 const form = $('postcard-form');
-const fieldsets = [$('upload-set'), $('details-set')];
 const photoInput = $('photo');
 const dropzone = $('dropzone');
 const photoTitle = $('photo-title');
+const photoStatus = $('photo-status');
 const locationInput = $('location');
 const keywordsInput = $('keywords');
 const monthSelect = $('month');
@@ -21,21 +21,10 @@ const emailInput = $('email');
 const sendDateInput = $('sendDate');
 const messageInput = $('message');
 const submitButton = $('submit');
-
 const previewCard = $('preview-card');
 const previewMeta = $('preview-meta');
-const live = $('live');
-const result = $('result');
-const resultImg = $('result-img');
-const resultNote = $('result-note');
-const downloadLink = $('download');
-const progress = $('progress');
-const progressText = $('progress-text');
-const elapsedEl = $('elapsed');
 const errorBox = $('error');
 const errorText = $('error-text');
-
-const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 /** YYYY-MM-DD in the browser's local time zone. */
 function localISODate(d) {
@@ -45,17 +34,17 @@ function localISODate(d) {
 // ---------- Defaults ----------
 
 const now = new Date();
-for (const [i, m] of MONTHS.entries()) monthSelect.add(new Option(m, m, false, i === now.getMonth()));
-yearInput.value = String(now.getFullYear());
+monthSelect.add(new Option('—', ''));
+for (const m of MONTHS) monthSelect.add(new Option(m, m));
 sendDateInput.min = localISODate(now);
 sendDateInput.value = localISODate(now);
 
 // ---------- Live preview ----------
 
+// Placeholders are drawn here (not by mountPostcard) because they depend on whether a photo is chosen.
 const card = mountPostcard($('postcard'), {
   photoLabel: 'Your photo',
   stampLabel: 'stamp drawn after you create',
-  placeholders: true,
 });
 
 let photoFile = null;
@@ -73,25 +62,77 @@ function keywordList() {
   return keywordsInput.value.split(',').map((k) => k.trim()).filter(Boolean).slice(0, 3);
 }
 
+/**
+ * Before a photo is chosen every empty line shows a placeholder. After that an empty location or
+ * date is left off, as on the final card; empty keywords keep their placeholder because Gemini fills them.
+ */
 function updateText() {
-  card.setText(
-    displayText({
-      location: locationInput.value,
-      keywords: keywordList(),
-      month: monthSelect.value,
-      year: yearInput.value.trim(),
-    }),
-  );
+  const strings = displayText({
+    location: locationInput.value,
+    keywords: keywordList(),
+    month: monthSelect.value,
+    year: yearInput.value.trim(),
+  });
+  const placeholderKeys = (photoFile ? ['keywords'] : Object.keys(PLACEHOLDERS)).filter((k) => !strings[k]);
+  for (const k of placeholderKeys) strings[k] = PLACEHOLDERS[k];
+  card.setText(strings);
+  for (const k of placeholderKeys) {
+    previewCard.querySelector(`.pc__line--${k}`)?.classList.add('pc__line--placeholder');
+  }
 }
 
 setOrientation('horizontal');
 updateText();
 
-for (const el of [locationInput, keywordsInput, monthSelect, yearInput]) {
+// ---------- Photo metadata ----------
+
+// Fields the user typed in or changed themselves; metadata never overwrites these.
+const AUTO_FIELDS = { location: locationInput, month: monthSelect, year: yearInput };
+const touched = new Set();
+let metadataRequest = 0;
+
+for (const [name, el] of Object.entries(AUTO_FIELDS)) {
   el.addEventListener('input', () => {
-    updateText();
-    clearError(el.id);
+    touched.add(name);
+    $(`${name}-from`).hidden = true;
   });
+}
+
+function cleanMetadata(body) {
+  const location = typeof body?.location === 'string' ? body.location.trim().slice(0, 100) : '';
+  const month = MONTHS.includes(body?.month) ? body.month : '';
+  const year = /^\d{4}$/.test(String(body?.year ?? '')) ? String(body.year) : '';
+  return { location, month, year };
+}
+
+async function readMetadata(file) {
+  const request = ++metadataRequest;
+  photoStatus.textContent = 'Reading the place and date from the photo…';
+  let found = { location: '', month: '', year: '' };
+  try {
+    const data = new FormData();
+    data.append('photo', file, file.name);
+    const res = await fetch('/api/metadata', { method: 'POST', body: data });
+    if (res.ok) found = cleanMetadata(await res.json());
+  } catch {
+    // No metadata is not a problem: the fields stay as they are.
+  }
+  if (request !== metadataRequest) return; // a newer photo was chosen meanwhile
+
+  for (const [name, el] of Object.entries(AUTO_FIELDS)) {
+    if (touched.has(name)) continue;
+    // Replace values filled from an earlier photo too, so they never outlive it.
+    el.value = found[name];
+    $(`${name}-from`).hidden = !found[name];
+  }
+  updateText();
+  const got = Object.entries(found).filter(([name, v]) => v && !touched.has(name)).length;
+  const any = Object.values(found).some(Boolean);
+  photoStatus.textContent = got
+    ? 'Filled in what the photo knows. You can change it.'
+    : any
+      ? ''
+      : 'No place or date found in this photo. Add them if you like.';
 }
 
 // ---------- Photo ----------
@@ -116,9 +157,11 @@ async function usePhoto(file) {
   if (photoURL) URL.revokeObjectURL(photoURL);
   photoFile = file;
   photoURL = url;
+  clearError('photo'); // a submit tried while the photo was still loading
   // Browsers apply EXIF rotation, so the natural size is already the upright size.
   setOrientation(orientationOf(probe.naturalWidth, probe.naturalHeight));
   card.setPhoto(url);
+  updateText();
   photoTitle.textContent = '';
   photoTitle.append(`${file.name} · `);
   const change = document.createElement('span');
@@ -126,24 +169,32 @@ async function usePhoto(file) {
   change.textContent = 'change photo';
   photoTitle.append(change);
   dropzone.classList.add('has-photo');
-  showLive();
+  hideError();
+  readMetadata(file);
 }
 
 photoInput.addEventListener('change', () => usePhoto(photoInput.files[0]));
 
 dropzone.addEventListener('dragover', (e) => {
   e.preventDefault();
-  if (!photoInput.disabled) dropzone.classList.add('is-over');
+  dropzone.classList.add('is-over');
 });
 dropzone.addEventListener('dragleave', () => dropzone.classList.remove('is-over'));
 dropzone.addEventListener('drop', (e) => {
   e.preventDefault();
   dropzone.classList.remove('is-over');
-  if (!photoInput.disabled) usePhoto(e.dataTransfer.files[0]);
+  usePhoto(e.dataTransfer.files[0]);
 });
 // A photo dropped next to the drop zone should not replace the page.
 window.addEventListener('dragover', (e) => e.preventDefault());
 window.addEventListener('drop', (e) => e.preventDefault());
+
+for (const el of [locationInput, keywordsInput, monthSelect, yearInput]) {
+  el.addEventListener('input', () => {
+    updateText();
+    clearError(el.id);
+  });
+}
 
 // ---------- Delivery ----------
 
@@ -190,8 +241,8 @@ function clearError(name) {
 function validate() {
   const problems = [];
   if (!photoFile) problems.push(['photo', 'Choose a photo first.']);
-  if (!locationInput.value.trim()) problems.push(['location', 'Enter a location.']);
-  if (!/^\d{4}$/.test(yearInput.value.trim())) problems.push(['year', 'Enter a four-digit year.']);
+  const year = yearInput.value.trim();
+  if (year && !/^\d{4}$/.test(year)) problems.push(['year', 'Enter a four-digit year, or leave it blank.']);
   if (emailChosen()) {
     if (!emailInput.value.trim() || !emailInput.checkValidity()) {
       problems.push(['email', 'Enter a valid email address.']);
@@ -200,7 +251,7 @@ function validate() {
       problems.push(['sendDate', 'Pick today or a later date.']);
     }
   }
-  for (const name of ['photo', 'location', 'year', 'email', 'sendDate']) clearError(name);
+  for (const name of ['photo', 'year', 'email', 'sendDate']) clearError(name);
   for (const [name, message] of problems) showFieldError(name, message);
   if (problems.length) $(problems[0][0]).focus();
   return problems.length === 0;
@@ -209,82 +260,22 @@ function validate() {
 // ---------- Submit ----------
 
 let busy = false;
-let timer = null;
-
-function formatElapsed(seconds) {
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-}
-
-/** Brings the preview card into view when it is off-screen (the stacked phone layout). */
-function revealPreview() {
-  const box = previewCard.getBoundingClientRect();
-  if (box.top < 0 || box.top > window.innerHeight * 0.6) {
-    previewCard.scrollIntoView({ behavior: reduceMotion.matches ? 'auto' : 'smooth', block: 'start' });
-  }
-}
 
 function setBusy(on) {
   busy = on;
-  for (const fs of fieldsets) fs.disabled = on;
-  previewCard.classList.toggle('is-busy', on);
-  submitButton.textContent = on ? 'Creating…' : 'Create postcard';
-  progress.hidden = !on;
-  clearInterval(timer);
-  if (on) {
-    const started = Date.now();
-    elapsedEl.textContent = '0:00';
-    progressText.textContent = 'Creating your postcard. This takes two to three minutes.';
-    timer = setInterval(() => {
-      const seconds = Math.floor((Date.now() - started) / 1000);
-      elapsedEl.textContent = formatElapsed(seconds);
-      if (seconds === 120) progressText.textContent = 'Still working. Sometimes it takes a few minutes.';
-    }, 1000);
-  }
-}
-
-function showLive() {
-  result.hidden = true;
-  errorBox.hidden = true;
-  live.hidden = false;
+  submitButton.disabled = on;
+  submitButton.textContent = on ? 'Sending…' : 'Create postcard';
 }
 
 function showError(message) {
-  errorBox.hidden = false;
   errorText.textContent = message;
+  errorBox.hidden = false;
+  errorBox.scrollIntoView({ block: 'nearest' });
 }
 
-function formatDate(iso) {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-}
-
-function showResult(body, keywordsWereBlank) {
-  if (keywordsWereBlank && Array.isArray(body.keywords) && body.keywords.length) {
-    keywordsInput.value = body.keywords.join(', ');
-    updateText();
-  }
-  const place = locationInput.value.trim();
-  resultImg.src = body.imageUrl;
-  resultImg.alt = `Your postcard from ${place}`;
-  downloadLink.href = body.imageUrl;
-  const slug = place.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'postcard';
-  downloadLink.download = `postcard-${slug}.jpg`;
-
-  resultNote.classList.remove('is-error');
-  if (body.scheduled) {
-    resultNote.textContent = `Scheduled for ${formatDate(body.scheduled.sendDate)} to ${body.scheduled.email}.`;
-    resultNote.hidden = false;
-  } else if (body.emailError) {
-    resultNote.textContent = `The postcard is ready, but the email couldn't be scheduled: ${body.emailError}`;
-    resultNote.classList.add('is-error');
-    resultNote.hidden = false;
-  } else {
-    resultNote.hidden = true;
-  }
-
-  live.hidden = true;
+function hideError() {
   errorBox.hidden = true;
-  result.hidden = false;
+  errorText.textContent = '';
 }
 
 async function submit() {
@@ -306,32 +297,26 @@ async function submit() {
     data.append('delivery', 'download');
   }
 
-  showLive();
+  hideError();
   setBusy(true);
-  revealPreview();
-  let ok = false;
   try {
     const res = await fetch('/api/postcards', { method: 'POST', body: data });
     const body = await res.json().catch(() => null);
     if (!res.ok) throw new Error(body?.error || `Something went wrong (HTTP ${res.status}).`);
-    if (!body?.imageUrl) throw new Error('The server sent an unexpected answer.');
-    showResult(body, keywords.length === 0);
-    ok = true;
+    if (typeof body?.id !== 'string' || !body.id) throw new Error('The server sent an unexpected answer.');
+    window.location.assign(`/making?id=${encodeURIComponent(body.id)}`);
   } catch (err) {
-    showError(err instanceof TypeError ? "Couldn't reach the app. Is the server still running?" : err.message);
-  } finally {
     setBusy(false);
+    showError(err instanceof TypeError ? "Couldn't reach the app. Is the server still running?" : err.message);
   }
-  revealPreview();
-  (ok ? downloadLink : $('retry')).focus({ preventScroll: true });
 }
 
 form.addEventListener('submit', (e) => {
   e.preventDefault();
   submit();
 });
-$('retry').addEventListener('click', submit);
-$('back').addEventListener('click', () => {
-  showLive();
-  locationInput.focus({ preventScroll: true });
+
+// Coming back with the Back button can restore the page from cache mid-submit.
+window.addEventListener('pageshow', (e) => {
+  if (e.persisted) setBusy(false);
 });

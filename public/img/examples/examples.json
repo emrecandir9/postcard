@@ -1,0 +1,8 @@
+[
+  { "file": "santorini.jpg", "orientation": "horizontal", "location": "Santorini, Greece", "keywords": ["domes", "caldera", "aegean"], "date": "MAY 2023" },
+  { "file": "kyoto.jpg", "orientation": "vertical", "location": "Kyoto, Japan", "keywords": ["pagoda", "lanes", "temples"], "date": "APR 2024" },
+  { "file": "giza.jpg", "orientation": "horizontal", "location": "Giza, Egypt", "keywords": ["pyramids", "desert", "pharaohs"], "date": "MAR 2023" },
+  { "file": "new-york.jpg", "orientation": "vertical", "location": "New York, USA", "keywords": ["skyline", "harbor", "lights"], "date": "SEP 2023" },
+  { "file": "sydney.jpg", "orientation": "horizontal", "location": "Sydney, Australia", "keywords": ["harbour", "sails", "bridge"], "date": "FEB 2024" },
+  { "file": "torres-del-paine.jpg", "orientation": "vertical", "location": "Torres del Paine, Chile", "keywords": ["peaks", "granite", "patagonia"], "date": "NOV 2023" }
+]
