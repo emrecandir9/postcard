@@ -326,3 +326,57 @@ test('pages and static routes', async () => {
   assert.equal(layout.status, 200);
   assert.match(layout.headers.get('content-type'), /javascript/);
 });
+
+// ---------- Gemini app (manual) mode ----------
+
+test('GET /api/brief: the prompt to paste into the Gemini app, per orientation', async () => {
+  const h = await fetch(`${base}/api/brief?orientation=horizontal`);
+  assert.equal(h.status, 200);
+  const { prompt } = await h.json();
+  assert.match(prompt, /16:7/);
+  assert.match(prompt, /attached photo/i);
+  const v = await (await fetch(`${base}/api/brief?orientation=vertical`)).json();
+  assert.match(v.prompt, /1:2/);
+  const bad = await fetch(`${base}/api/brief?orientation=diagonal`);
+  assert.equal(bad.status, 400);
+  assert.ok((await bad.json()).error);
+});
+
+async function postWithPanel(fields, panel) {
+  const fd = new FormData();
+  fd.append('photo', new Blob([await plainPhoto()], { type: 'image/jpeg' }), 'p.jpg');
+  fd.append('panel', new Blob([panel], { type: 'image/png' }), 'stamp.png');
+  for (const [k, v] of Object.entries(fields)) fd.append(k, v);
+  const res = await fetch(`${base}/api/postcards`, { method: 'POST', body: fd });
+  return { status: res.status, body: await res.json() };
+}
+
+test('an uploaded stamp panel is used as is: agy is not called and blank keywords stay blank', async () => {
+  const red = await sharp({ create: { width: 1600, height: 700, channels: 3, background: '#C03020' } }).png().toBuffer();
+  const before = calls.panel.length;
+  const { status: code, body } = await postWithPanel({ ...valid, keywords: '' }, red);
+  assert.equal(code, 202, JSON.stringify(body));
+  const done = await settle(body.id);
+  assert.equal(done.status, 'done', done.error);
+  assert.equal(calls.panel.length, before, 'agy not asked');
+  assert.deepEqual(done.result.keywords, []);
+  // Bottom-left of the paper strip (away from the text) carries the uploaded panel's colour.
+  const jpeg = await (await fetch(`${base}${done.result.imageUrl}`)).arrayBuffer();
+  const { data, info } = await sharp(Buffer.from(jpeg)).raw().toBuffer({ resolveWithObject: true });
+  const at = (x, y) => data.slice((y * info.width + x) * info.channels, (y * info.width + x) * info.channels + 3);
+  const [r, g, b] = at(60, info.height - 60);
+  assert.ok(r > 150 && g < 90 && b < 80, `expected red paper, got ${r},${g},${b}`);
+});
+
+test('typed keywords are printed with an uploaded panel; an unreadable panel is a 400', async () => {
+  const paper = await sharp({ create: { width: 800, height: 1600, channels: 3, background: '#EAE0CA' } }).png().toBuffer();
+  const ok = await postWithPanel({ ...valid, keywords: 'tram, hills, tiles' }, paper);
+  assert.equal(ok.status, 202);
+  assert.deepEqual((await settle(ok.body.id)).result.keywords, ['tram', 'hills', 'tiles']);
+
+  const before = calls.panel.length;
+  const bad = await postWithPanel(valid, Buffer.from('not an image'));
+  assert.equal(bad.status, 400);
+  assert.match(bad.body.error, /Gemini/);
+  assert.equal(calls.panel.length, before);
+});

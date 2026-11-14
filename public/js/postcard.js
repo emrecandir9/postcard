@@ -51,9 +51,12 @@ export function mountPostcard(root, { photoLabel = '', stampLabel = '', placehol
   photo.append(photoText, img);
 
   const paper = make('div', 'pc__paper');
+  const paperImg = make('img', 'pc__paper-img');
+  paperImg.alt = '';
+  paperImg.hidden = true;
   const stamp = make('div', 'pc__stamp');
   if (stampLabel) stamp.append(make('span', 'pc__stamp-label', stampLabel));
-  paper.append(stamp);
+  paper.append(paperImg, stamp);
 
   root.replaceChildren(photo, paper);
 
@@ -107,6 +110,13 @@ export function mountPostcard(root, { photoLabel = '', stampLabel = '', placehol
       else img.removeAttribute('src');
       img.hidden = !src;
       photoText.hidden = Boolean(src);
+    },
+    /** src: a paper image drawn in the Gemini app (replaces the stamp box), or null to show the box. */
+    setPaperImage(src) {
+      if (src) paperImg.src = src;
+      else paperImg.removeAttribute('src');
+      paperImg.hidden = !src;
+      stamp.hidden = Boolean(src);
     },
     /** next: { location, keywords, date } as returned by displayText(). */
     setText(next) {

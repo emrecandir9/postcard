@@ -81,3 +81,16 @@
 .pc__line--placeholder {
   opacity: calc(var(--pc-ink-opacity) * 0.38);
 }
+
+/* A paper image drawn in the Gemini app, shown as the server will use it (3% of each edge trimmed). */
+.pc__paper {
+  overflow: hidden;
+}
+
+.pc__paper-img {
+  position: absolute;
+  inset: -3.2%;
+  width: 106.4%;
+  height: 106.4%;
+  object-fit: cover;
+}

@@ -65,6 +65,45 @@
         <fieldset class="card create__fields" id="details-set" data-reveal data-reveal-delay="80">
           <legend class="visually-hidden">Details</legend>
 
+          <fieldset class="field field--group">
+            <legend class="label">Stamp drawing</legend>
+            <div class="choices">
+              <label class="choice">
+                <input type="radio" name="drawer" value="agy" id="drawer-agy" checked />
+                <span>Automatic</span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="drawer" value="app" id="drawer-app" />
+                <span>Gemini app</span>
+              </label>
+            </div>
+            <p class="field__hint" id="drawer-hint">Gemini draws it for you through agy. About 13 postcards every 5 hours.</p>
+          </fieldset>
+
+          <div class="app-steps" id="app-steps" hidden>
+            <ol class="app-steps__list">
+              <li>
+                <p>Copy the prompt for this photo.</p>
+                <button class="btn btn--secondary btn--small" type="button" id="copy-prompt">Copy prompt</button>
+                <span class="app-steps__status" id="copy-status" role="status"></span>
+                <textarea class="input textarea app-steps__prompt" id="prompt-text" rows="6" readonly hidden aria-label="Prompt for the Gemini app"></textarea>
+              </li>
+              <li>
+                <p><a href="https://gemini.google.com/app" target="_blank" rel="noopener">Open the Gemini app</a>, paste the prompt, attach the same photo and send it.</p>
+              </li>
+              <li>
+                <p>Download the image Gemini makes and add it here.</p>
+                <input id="panel" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp"
+                       aria-describedby="panel-status panel-error" />
+                <label for="panel" class="dropzone dropzone--small" id="panel-drop">
+                  <span class="dropzone__title" id="panel-title">Drop Gemini's image here or <span class="dropzone__link">choose a file</span></span>
+                </label>
+                <p class="field__hint" id="panel-status" role="status"></p>
+                <p class="field__error" id="panel-error" hidden></p>
+              </li>
+            </ol>
+          </div>
+
           <div class="field">
             <label class="label" for="location">Location <span class="label__optional">optional</span><span class="from-photo" id="location-from" hidden>from photo</span></label>
             <input class="input" id="location" name="location" type="text" autocomplete="off" maxlength="100"

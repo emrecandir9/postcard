@@ -224,7 +224,7 @@ sleep 3; echo yes > "${alive}"`);
   const t0 = Date.now();
   try {
     await assert.rejects(generatePanel('horizontal', '/abs/photo.jpg', job, { keywords: true }), (e) => {
-      assert.equal(e.message, "Gemini's image quota is used up. It resets in about 2 h 53 min.");
+      assert.equal(e.message, "Gemini's image quota is used up. It resets in about 2 h 53 min. Until then, choose \"Gemini app\" on the create page.");
       return true;
     });
   } finally {
@@ -236,18 +236,19 @@ sleep 3; echo yes > "${alive}"`);
 });
 
 test('quotaError: reset time when given, otherwise "Try again later."', () => {
-  assert.equal(quotaError('quota exceeded, reset after 2h52m54s').message, "Gemini's image quota is used up. It resets in about 2 h 53 min.");
-  assert.equal(quotaError('rate limit; resets in 45m').message, "Gemini's image quota is used up. It resets in about 45 min.");
-  assert.equal(quotaError('reset after 3h0m10s').message, "Gemini's image quota is used up. It resets in about 3 h.");
-  assert.equal(quotaError('reset after 20s').message, "Gemini's image quota is used up. It resets in less than a minute.");
-  assert.equal(quotaError('Error 429: RESOURCE_EXHAUSTED').message, "Gemini's image quota is used up. Try again later.");
+  assert.equal(quotaError('quota exceeded, reset after 2h52m54s').message, "Gemini's image quota is used up. It resets in about 2 h 53 min. Until then, choose \"Gemini app\" on the create page.");
+  assert.equal(quotaError('rate limit; resets in 45m').message, "Gemini's image quota is used up. It resets in about 45 min. Until then, choose \"Gemini app\" on the create page.");
+  assert.equal(quotaError('reset after 3h0m10s').message, "Gemini's image quota is used up. It resets in about 3 h. Until then, choose \"Gemini app\" on the create page.");
+  assert.equal(quotaError('reset after 20s').message, "Gemini's image quota is used up. It resets in less than a minute. Until then, choose \"Gemini app\" on the create page.");
+  assert.equal(quotaError('exhausted on model `gemini-3.1-flash-image`; quota resets after ~3h50m).').message, "Gemini's image quota is used up. It resets in about 3 h 50 min. Until then, choose \"Gemini app\" on the create page.");
+  assert.equal(quotaError('Error 429: RESOURCE_EXHAUSTED').message, "Gemini's image quota is used up. Try again later. Until then, choose \"Gemini app\" on the create page.");
 });
 
 test('generatePanel: agy failure and quota messages are readable', async () => {
   const { job } = setup('echo "boom: something broke" >&2; exit 3');
   await assert.rejects(generatePanel('horizontal', '/abs/photo.jpg', job), /agy failed.*something broke/is);
   setup('echo "Error: RESOURCE_EXHAUSTED: quota exceeded" >&2; exit 1');
-  await assert.rejects(generatePanel('horizontal', '/abs/photo.jpg', job), { message: "Gemini's image quota is used up. Try again later." });
+  await assert.rejects(generatePanel('horizontal', '/abs/photo.jpg', job), { message: "Gemini's image quota is used up. Try again later. Until then, choose \"Gemini app\" on the create page." });
   options.bin = join(root, 'does-not-exist');
   await assert.rejects(generatePanel('horizontal', '/abs/photo.jpg', job), /agy/i);
 });

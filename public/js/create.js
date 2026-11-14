@@ -25,6 +25,18 @@ const previewCard = $('preview-card');
 const previewMeta = $('preview-meta');
 const errorBox = $('error');
 const errorText = $('error-text');
+const drawerAgy = $('drawer-agy');
+const drawerApp = $('drawer-app');
+const drawerHint = $('drawer-hint');
+const keywordsHint = $('keywords-hint');
+const appSteps = $('app-steps');
+const copyButton = $('copy-prompt');
+const copyStatus = $('copy-status');
+const promptText = $('prompt-text');
+const panelInput = $('panel');
+const panelDrop = $('panel-drop');
+const panelTitle = $('panel-title');
+const panelStatus = $('panel-status');
 
 /** YYYY-MM-DD in the browser's local time zone. */
 function localISODate(d) {
@@ -64,7 +76,8 @@ function keywordList() {
 
 /**
  * Before a photo is chosen every empty line shows a placeholder. After that an empty location or
- * date is left off, as on the final card; empty keywords keep their placeholder because Gemini fills them.
+ * date is left off, as on the final card; empty keywords keep their placeholder because Gemini fills
+ * them (except in Gemini app mode, where nobody fills them and the line is left off).
  */
 function updateText() {
   const strings = displayText({
@@ -73,7 +86,8 @@ function updateText() {
     month: monthSelect.value,
     year: yearInput.value.trim(),
   });
-  const placeholderKeys = (photoFile ? ['keywords'] : Object.keys(PLACEHOLDERS)).filter((k) => !strings[k]);
+  const afterPhoto = appMode() ? [] : ['keywords'];
+  const placeholderKeys = (photoFile ? afterPhoto : Object.keys(PLACEHOLDERS)).filter((k) => !strings[k]);
   for (const k of placeholderKeys) strings[k] = PLACEHOLDERS[k];
   card.setText(strings);
   for (const k of placeholderKeys) {
@@ -162,6 +176,8 @@ async function usePhoto(file) {
   setOrientation(orientationOf(probe.naturalWidth, probe.naturalHeight));
   card.setPhoto(url);
   updateText();
+  checkPanelShape();
+  resetPrompt();
   photoTitle.textContent = '';
   photoTitle.append(`${file.name} · `);
   const change = document.createElement('span');
@@ -195,6 +211,143 @@ for (const el of [locationInput, keywordsInput, monthSelect, yearInput]) {
     clearError(el.id);
   });
 }
+
+// ---------- Stamp drawing: automatic (agy) or Gemini app ----------
+
+const DRAWER_KEY = 'postcard.drawer';
+let panelFile = null;
+let panelURL = null;
+let panelSize = null; // { w, h } of the image from Gemini
+
+function appMode() {
+  return drawerApp.checked;
+}
+
+function syncDrawer() {
+  const app = appMode();
+  appSteps.hidden = !app;
+  drawerHint.textContent = app
+    ? 'You make the stamp in the Gemini app and add it here. Uses the Gemini app’s own, larger allowance.'
+    : 'Gemini draws it for you through agy. About 13 postcards every 5 hours.';
+  keywordsHint.textContent = app
+    ? 'Separate them with commas. Leave blank and the line is left off.'
+    : 'Separate them with commas. Leave blank and Gemini suggests three.';
+  card.setPaperImage(app ? panelURL : null);
+  updateText();
+  if (!app) clearError('panel');
+  try {
+    localStorage.setItem(DRAWER_KEY, app ? 'app' : 'agy');
+  } catch {
+    // Not remembered: fine.
+  }
+}
+
+try {
+  if (localStorage.getItem(DRAWER_KEY) === 'app') drawerApp.checked = true;
+} catch {
+  // Storage blocked: start on Automatic.
+}
+for (const r of [drawerAgy, drawerApp]) r.addEventListener('change', syncDrawer);
+syncDrawer();
+
+// The prompt depends on the photo's orientation, so a new photo needs a fresh copy.
+function resetPrompt() {
+  copyStatus.textContent = '';
+  promptText.hidden = true;
+}
+
+copyButton.addEventListener('click', async () => {
+  if (!photoFile) {
+    copyStatus.textContent = 'Choose the photo first: the prompt depends on its shape.';
+    return;
+  }
+  copyStatus.textContent = '';
+  let prompt;
+  try {
+    const res = await fetch(`/api/brief?orientation=${card.orientation}`);
+    if (!res.ok) throw new Error();
+    ({ prompt } = await res.json());
+  } catch {
+    copyStatus.textContent = "Couldn't get the prompt. Is the server still running?";
+    return;
+  }
+  promptText.value = prompt;
+  let copied = false;
+  try {
+    await navigator.clipboard.writeText(prompt);
+    copied = true;
+  } catch {
+    // Clipboard API not allowed here: try the older copy command on the selected text.
+    promptText.hidden = false;
+    promptText.select();
+    try {
+      copied = document.execCommand('copy');
+    } catch {
+      copied = false;
+    }
+  }
+  promptText.hidden = copied;
+  copyStatus.textContent = copied ? 'Copied.' : 'Copy the text below.';
+  if (!copied) promptText.select();
+});
+
+/** Warn when Gemini's image is a very different shape from the paper, since part of it gets cut off. */
+function checkPanelShape() {
+  if (!panelSize) return;
+  const want = LAYOUTS[card.orientation].paperRatio;
+  const got = panelSize.w / panelSize.h;
+  const off = Math.max(got / want, want / got);
+  const shape = `${panelSize.w} × ${panelSize.h}`;
+  if (off < 1.3) {
+    panelStatus.textContent = `${shape}. The preview shows how it will be used.`;
+  } else {
+    const ask = card.orientation === 'horizontal' ? 'wider (21:9)' : 'taller (9:16)';
+    panelStatus.textContent = `${shape}: a different shape from the paper, so its edges are cut off (see the preview). If the stamp is cut, ask Gemini for a ${ask} image.`;
+  }
+}
+
+async function usePanel(file) {
+  clearError('panel');
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    showFieldError('panel', "That file isn't an image.");
+    return;
+  }
+  const url = URL.createObjectURL(file);
+  const probe = new Image();
+  probe.src = url;
+  try {
+    await probe.decode();
+  } catch {
+    URL.revokeObjectURL(url);
+    showFieldError('panel', "This browser can't open that file. Save Gemini's image as JPEG, PNG or WebP.");
+    return;
+  }
+  if (panelURL) URL.revokeObjectURL(panelURL);
+  panelFile = file;
+  panelURL = url;
+  panelSize = { w: probe.naturalWidth, h: probe.naturalHeight };
+  card.setPaperImage(url);
+  panelTitle.textContent = '';
+  panelTitle.append(`${file.name} · `);
+  const change = document.createElement('span');
+  change.className = 'dropzone__link';
+  change.textContent = 'change image';
+  panelTitle.append(change);
+  checkPanelShape();
+}
+
+panelInput.addEventListener('change', () => usePanel(panelInput.files[0]));
+panelDrop.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  panelDrop.classList.add('is-over');
+});
+panelDrop.addEventListener('dragleave', () => panelDrop.classList.remove('is-over'));
+panelDrop.addEventListener('drop', (e) => {
+  e.preventDefault();
+  panelDrop.classList.remove('is-over');
+  usePanel(e.dataTransfer.files[0]);
+});
 
 // ---------- Delivery ----------
 
@@ -241,6 +394,7 @@ function clearError(name) {
 function validate() {
   const problems = [];
   if (!photoFile) problems.push(['photo', 'Choose a photo first.']);
+  if (appMode() && !panelFile) problems.push(['panel', 'Add the image Gemini made (step 3).']);
   const year = yearInput.value.trim();
   if (year && !/^\d{4}$/.test(year)) problems.push(['year', 'Enter a four-digit year, or leave it blank.']);
   if (emailChosen()) {
@@ -251,7 +405,7 @@ function validate() {
       problems.push(['sendDate', 'Pick today or a later date.']);
     }
   }
-  for (const name of ['photo', 'year', 'email', 'sendDate']) clearError(name);
+  for (const name of ['photo', 'panel', 'year', 'email', 'sendDate']) clearError(name);
   for (const [name, message] of problems) showFieldError(name, message);
   if (problems.length) $(problems[0][0]).focus();
   return problems.length === 0;
@@ -284,6 +438,7 @@ async function submit() {
   const keywords = keywordList();
   const data = new FormData();
   data.append('photo', photoFile, photoFile.name);
+  if (appMode()) data.append('panel', panelFile, panelFile.name);
   data.append('location', locationInput.value.trim());
   if (keywords.length) data.append('keywords', keywords.join(', '));
   data.append('month', monthSelect.value);

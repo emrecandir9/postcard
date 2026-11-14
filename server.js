@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { MONTHS, displayText } from './shared/layout.js';
 import { preparePhoto, fitPanel, compose, regions } from './lib/pipeline.js';
 import { printText } from './lib/text.js';
+import { appPrompt } from './lib/prompt.js';
 import * as agy from './lib/agy.js';
 import * as email from './lib/email.js';
 import * as metadata from './lib/metadata.js';
@@ -65,16 +66,18 @@ function validate(body, file, emailOn) {
 
 const UNREADABLE = 'Could not read the photo. Please use a JPEG, PNG or WebP image.';
 
+const UNREADABLE_PANEL = 'Could not read the image from Gemini. Please save it as a JPEG, PNG or WebP and add it again.';
+
 /** Quick check (header only) that sharp can decode the upload, so bad files get a 400 before the job starts. */
-async function checkReadable(buffer) {
+async function checkReadable(buffer, unreadable = UNREADABLE) {
   let meta;
   try {
     meta = await sharp(buffer).metadata();
   } catch {
-    throw new BadRequest(UNREADABLE);
+    throw new BadRequest(unreadable);
   }
   if (meta.format === 'heif' && meta.compression === 'hevc') {
-    throw new BadRequest('HEIC photos cannot be read here. Please use a JPEG, PNG or WebP image.');
+    throw new BadRequest(unreadable === UNREADABLE ? 'HEIC photos cannot be read here. Please use a JPEG, PNG or WebP image.' : unreadable);
   }
 }
 
@@ -92,7 +95,7 @@ export function createApp(deps = {}) {
 
   const store = createJobStore({ resultsDir, now });
   const app = express();
-  const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 30 * 1024 * 1024, files: 1 } });
+  const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 30 * 1024 * 1024, files: 2 } });
 
   app.use(express.static(here('./public')));
   app.get('/create', (req, res) => res.sendFile(here('./public/create.html')));
@@ -104,13 +107,22 @@ export function createApp(deps = {}) {
 
   app.get('/api/config', (req, res) => res.json({ emailEnabled: emailEnabled() }));
 
+  // Gemini app mode: the prompt the owner pastes into the Gemini app with the photo attached.
+  app.get('/api/brief', (req, res) => {
+    const { orientation } = req.query;
+    if (orientation !== 'horizontal' && orientation !== 'vertical') {
+      return res.status(400).json({ error: 'orientation must be "horizontal" or "vertical".' });
+    }
+    res.json({ prompt: appPrompt(orientation) });
+  });
+
   app.post('/api/metadata', upload.single('photo'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'Please choose a photo.' });
     res.json(await readMetadata(req.file.buffer));
   });
 
   /** The whole pipeline for one job, with the time of each stage in the log. */
-  async function run(job, input, buffer) {
+  async function run(job, input, buffer, panelBuffer) {
     const tag = `[postcard ${job.id.slice(0, 8)}]`;
     const times = {};
     let t = Date.now();
@@ -140,18 +152,24 @@ export function createApp(deps = {}) {
       await sharp(photo).jpeg({ quality: 90 }).toFile(photoPath);
 
       // drawing: Gemini draws the paper panel (and suggests keywords in the same call when needed).
+      // In Gemini app mode the panel was drawn in the app and uploaded, so agy is not used at all.
       stage('drawing');
       const typed = input.keywords.map((k) => k.toLowerCase());
-      const drawn = await generatePanel(orientation, photoPath, jobDir, { keywords: typed.length === 0 });
-      const keywords = typed.length ? typed : drawn.keywords;
+      let keywords = typed;
+      let drawnPanel = panelBuffer;
+      if (!drawnPanel) {
+        const drawn = await generatePanel(orientation, photoPath, jobDir, { keywords: typed.length === 0 });
+        if (!typed.length) keywords = drawn.keywords;
+        drawnPanel = await readFile(drawn.imagePath);
+      }
 
       // printing: fit the panel and print the text (blank lines are left out).
       stage('printing');
       let panel;
       try {
-        panel = await fitPanel(await readFile(drawn.imagePath), orientation, scale);
+        panel = await fitPanel(drawnPanel, orientation, scale);
       } catch {
-        throw new Error('Gemini returned a file that is not a readable image. Try again.');
+        throw new Error(panelBuffer ? UNREADABLE_PANEL : 'Gemini returned a file that is not a readable image. Try again.');
       }
       panel = await printText(panel, orientation, displayText({ location, keywords, month, year }));
 
@@ -197,22 +215,29 @@ export function createApp(deps = {}) {
   // One postcard at a time; later jobs wait (their stage stays "preparing").
   let queue = Promise.resolve();
 
-  app.post('/api/postcards', upload.single('photo'), async (req, res) => {
+  // photo, plus an optional panel: the stamp image drawn in the Gemini app (Gemini app mode).
+  const postcardFiles = upload.fields([{ name: 'photo', maxCount: 1 }, { name: 'panel', maxCount: 1 }]);
+
+  app.post('/api/postcards', postcardFiles, async (req, res) => {
+    const photoFile = req.files?.photo?.[0];
+    const panelFile = req.files?.panel?.[0];
     let input;
     try {
-      input = validate(req.body ?? {}, req.file, emailEnabled());
-      await checkReadable(req.file.buffer);
+      input = validate(req.body ?? {}, photoFile, emailEnabled());
+      await checkReadable(photoFile.buffer);
+      if (panelFile) await checkReadable(panelFile.buffer, UNREADABLE_PANEL);
     } catch (e) {
       if (e instanceof BadRequest) return res.status(400).json({ error: e.message });
       throw e;
     }
     const job = store.create();
-    const buffer = req.file.buffer;
+    const buffer = photoFile.buffer;
+    const panelBuffer = panelFile?.buffer;
     const queuedAt = Date.now();
     queue = queue.then(() => {
       const waited = Date.now() - queuedAt;
       if (waited > 50) log(`[postcard ${job.id.slice(0, 8)}] waited ${waited} ms for the previous postcard`);
-      return run(job, input, buffer);
+      return run(job, input, buffer, panelBuffer);
     });
     res.status(202).json({ id: job.id });
   });

@@ -46,6 +46,15 @@ Keywords: if you leave them blank, Gemini suggests three in the same call that d
 reply has no usable keywords, the keywords line is left off rather than asking again (that would
 double the wait).
 
+Stamp drawing has two modes on `/create`:
+- **Automatic** (default): agy draws the panel, one image per postcard. agy's image model
+  (`gemini-3.1-flash-image`) has its own allowance, separate from the Gemini app: on this plan about
+  13 images per 5-hour window.
+- **Gemini app**: "Copy prompt" copies the prompt for this photo (`GET /api/brief?orientation=…`). You
+  paste it into the Gemini app with the photo attached, download the image it makes and add it to the
+  form, which sends it as `panel` with the postcard. agy is not used, so this works when agy's quota is
+  used up. Keywords are not suggested in this mode; a blank keywords line is left off.
+
 Only one postcard is made at a time; a second one waits in "preparing". Finished postcards stay
 readable after a restart (a small `<id>.json` is saved beside each `<id>.jpg`). The server log shows
 how long each stage took, plus the steps inside "drawing" (when agy's image appeared, when it replied).
